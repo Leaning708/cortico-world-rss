@@ -1,0 +1,10 @@
+{
+  // 浏览器端面板:只在这里带 DOM;Node 侧 tsconfig 排除 src/webui。
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node"]
+  },
+  "include": ["src/webui/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

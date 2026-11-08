@@ -1,0 +1,68 @@
+{
+  "name": "cortico-world-rss",
+  "version": "0.1.31",
+  "type": "module",
+  "description": "RSS World for Cortico: subscribe to multiple feeds, get condensed notifications from Coo, manage subscriptions from chat or WebUI",
+  "keywords": [
+    "cortico-world",
+    "cortico",
+    "rss",
+    "news"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@11.28.6",
+  "main": "./src/index.ts",
+  "cortico": {
+    "kind": "world",
+    "api": 6,
+    "displayName": "RSS 订阅",
+    "icon": "assets/icon.svg",
+    "describe": "describe.json",
+    "webUiClient": "dist/webui.js",
+    "tags": [
+      "internet"
+    ],
+    "locales": {
+      "zh": {
+        "displayName": "RSS 订阅",
+        "description": "订阅多个 RSS 源,Coo 把新内容精简后告诉你;支持免打扰、每日晨报、关键词过滤、全文阅读与 OPML 互通。"
+      },
+      "en": {
+        "displayName": "RSS Reader",
+        "description": "Subscribe to RSS feeds; Coo condenses new items and tells you. Quiet hours, daily digest, keyword filters, full-text reading and OPML included."
+      }
+    }
+  },
+  "files": [
+    "src",
+    "dist",
+    "assets",
+    "README.md",
+    "CHANGELOG.md",
+    "describe.json",
+    "LICENSE",
+    "AGENTS.md",
+    "docs"
+  ],
+  "scripts": {
+    "build:webui": "esbuild src/webui/client.ts --bundle --format=esm --platform=browser --target=es2022 --outfile=dist/webui.js",
+    "test": "esbuild src/webui/client.ts --bundle --format=esm --platform=browser --target=es2022 --outfile=dist/webui.js && vitest run",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.web.json",
+    "describe:local": "tsx scripts/describe.ts",
+    "feed-server": "node scripts/feed-server.mjs"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "cortico": "^0.2.11",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "license": "GPL-3.0-or-later"
+}
