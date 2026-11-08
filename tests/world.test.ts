@@ -36,7 +36,6 @@ function makeWorld(overrides: Partial<RssConfigSection> = {}, fetchScript?: (url
     fetchImpl: fetchScript
       ? async (input) => Promise.resolve(fetchScript(String(input)))
       : async () => { throw new Error('no network in test'); },
-    resolve: async (host) => (host === '127.0.0.1' ? ['127.0.0.1'] : ['93.184.216.34']),
   });
   const tools = Object.fromEntries(world.tools().map((tool) => [
     tool.name,
@@ -79,10 +78,9 @@ describe('构造与配置', () => {
   });
 
   it('envPromptVars 渲染当前配置', () => {
-    const { world } = makeWorld({ quietHours: '23:00-08:00', digestEnabled: true, digestTime: '08:30' });
+    const { world } = makeWorld({ digestEnabled: true, digestTime: '08:30' });
     expect(world.envPromptVars()).toEqual({
       'rss.feedCount': '0',
-      'rss.quietHours': '23:00-08:00',
       'rss.digestTime': '08:30',
     });
   });
@@ -108,32 +106,31 @@ describe('构造与配置', () => {
     const ui = world.webUi?.('zh');
     const values = await ui?.invoke?.('manage', 'config.get', []) as Record<string, unknown>;
     expect(values.pollIntervalMinutes).toBe(30);
-    expect(values.notifyDefault).toBe('notify');
-    expect(Object.keys(values)).toHaveLength(19);
+    expect(Object.keys(values)).toHaveLength(15);
+    expect(values.userAgent).toBeUndefined();
+    const overview = await ui?.invoke?.('manage', 'overview', []) as { defaultUserAgent: string };
+    expect(overview.defaultUserAgent).toMatch(/^Coopanion RSS Reader\/\d+\.\d+\.\d+$/);
     // 合法保存:夹取 + 活配置生效 + persist 收到补丁。
     const saved = await ui?.invoke?.('manage', 'config.save', [{
       pollIntervalMinutes: 0, // 低于下限 → 钳到 1
-      quietHours: '23:00-08:00',
-      notifyDefault: 'digest',
       autoMarkReadOnNotify: true,
       watchKeywords: ' AI , 模型 ',
     }]) as { ok: boolean; restartRequired: boolean; applied: string[] };
     expect(saved.ok).toBe(true);
     expect(saved.restartRequired).toBe(false);
     expect(cfg.pollIntervalMinutes).toBe(1);
-    expect(cfg.quietHours).toBe('23:00-08:00');
-    expect(cfg.notifyDefault).toBe('digest');
     expect(cfg.autoMarkReadOnNotify).toBe(true);
     expect(cfg.watchKeywords).toBe('AI , 模型');
     expect(persisted).toHaveLength(1);
-    expect(saved.applied).toHaveLength(5);
+    expect(saved.applied).toHaveLength(3);
     // retentionDays 改动 → restartRequired。
     const saved2 = await ui?.invoke?.('manage', 'config.save', [{ retentionDays: 7 }]) as { restartRequired: boolean };
     expect(saved2.restartRequired).toBe(true);
     // 白名单外/格式错 → 整单拒绝。
     await expect(ui?.invoke?.('manage', 'config.save', [{ enabled: true }])).rejects.toThrow('未知或不可保存');
-    await expect(ui?.invoke?.('manage', 'config.save', [{ quietHours: '25:00-99:99' }])).rejects.toThrow('HH:MM');
-    await expect(ui?.invoke?.('manage', 'config.save', [{ notifyDefault: 'bomb' }])).rejects.toThrow('notify');
+    await expect(ui?.invoke?.('manage', 'config.save', [{ digestTime: '9点' }])).rejects.toThrow('HH:MM');
+    // 0.1.34 起移除的旧键也不可通过面板写回。
+    await expect(ui?.invoke?.('manage', 'config.save', [{ quietHours: '23:00-08:00' }])).rejects.toThrow('未知或不可保存');
     expect(persisted).toHaveLength(2); // 两次合法保存落盘;被拒绝的三次不落盘
   });
 });
@@ -176,8 +173,8 @@ describe('rss_add:发现、试解析、baseline', () => {
   });
 
   it('baseline:1 时最新一条可推送,历史静默且已读', async () => {
-    const { world, tools } = makeWorld({ baselineNotifyCount: 1 }, () => response(RSS([['old', '旧条目'], ['new', '最新条目']])));
-    await tools.rss_add({ url: 'https://example.org/feed.xml' });
+    const { world, tools } = makeWorld({}, () => response(RSS([['old', '旧条目'], ['new', '最新条目']])));
+    await tools.rss_add({ url: 'https://example.org/feed.xml', baseline: 1 });
     const store = (world as unknown as { store: { itemsQuery(q: object): { items: Array<{ uid: string; notified: boolean; read: boolean }> }; unreadCount(): number } }).store;
     const items = store.itemsQuery({ scope: 'all' }).items;
     const newest = items.find((item) => item.uid === 'new');
@@ -190,20 +187,15 @@ describe('rss_add:发现、试解析、baseline', () => {
     expect(store.unreadCount()).toBe(1);
   });
 
-  it('私网地址默认拒绝;按源放行可订阅', async () => {
-    const denied = makeWorld();
-    const receiptDenied = receiptText(await denied.tools.rss_add({ url: 'http://127.0.0.1:8787/rss.xml' }));
-    expect(receiptDenied).toContain('私网');
-
-    // 按源放行:全局开关不动,单源参数放行。
-    const perFeed = makeWorld({}, () => response(RSS([['l2', '按源放行条目']], '按源源')));
-    const receiptPerFeed = receiptText(await perFeed.tools.rss_add({ url: 'http://127.0.0.1:8787/rss.xml', allowPrivate: true }));
-    expect(receiptPerFeed).toContain('已订阅「按源源」');
-    const store = (perFeed.world as unknown as { store: import('../src/store.ts').RssStore }).store;
-    expect(store.feeds()[0]?.allowPrivate).toBe(true);
-    // 该源后续轮询也走按源放行(fetcher 断言走 resolve 注入:127.0.0.1 通过)。
-    const outcomes = await perFeed.tools.rss_refresh({}) as string;
-    expect(outcomes).toContain('新 0 条'); // guid 未变 → 0 新(200 全量但内容一致)
+  it('本机/私网地址默认允许订阅(无开关)', async () => {
+    const local = makeWorld({}, () => response(RSS([['l1', '本机条目']], '本机源')));
+    const receipt = receiptText(await local.tools.rss_add({ url: 'http://127.0.0.1:8787/rss.xml' }));
+    expect(receipt).toContain('已订阅「本机源」');
+    const store = (local.world as unknown as { store: import('../src/store.ts').RssStore }).store;
+    expect(store.feeds()).toHaveLength(1);
+    // 后续轮询照常工作。
+    const outcomes = await local.tools.rss_refresh({}) as string;
+    expect(outcomes).toContain('新 0 条');
   });
 
   it('按源全文开关:feed.fullText=false 时 rss_read(full) 拒抓并提示', async () => {
@@ -252,25 +244,6 @@ describe('事件链路', () => {
     expect(n3?.notified).toBe(true);
     const n1 = store.itemsQuery({ scope: 'all' }).items.find((item) => item.uid === 'n1');
     expect(n1?.read).toBe(true);
-    await world.stop();
-  });
-
-  it('免打扰时段:事件改 piggyback 并在时段结束 promote(flush)', async () => {
-    let body = RSS([['q1', '安静条目一']]);
-    const { world, tools } = makeWorld({ quietHours: '00:00-23:59', eventBatchSeconds: 5 }, () => response(body));
-    const host = await mounted(world);
-    await tools.rss_add({ url: 'https://example.org/feed.xml' });
-    body = RSS([['q1', '安静条目一'], ['q2', '安静条目二']]);
-    await tools.rss_refresh({});
-    (world as unknown as { poller: { flushBatch(): void } }).poller.flushBatch();
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    expect(host.pushOpts[0]?.trigger).toBe('piggyback');
-    expect(host.events[0]?.meta?.quiet).toBe(true);
-    const cursors = (world as unknown as { heldCursors: number[] }).heldCursors;
-    expect(cursors).toHaveLength(1);
-    // 手动触发释放(时段结束的等价动作)。
-    (world as unknown as { releaseHeld(): void }).releaseHeld();
-    expect(host.promoted).toEqual([{ cursor: cursors[0], trigger: 'flush' }]);
     await world.stop();
   });
 

@@ -13,24 +13,18 @@ export interface RssConfigSection {
   requestTimeoutMs: number;
   /** 订阅容量上限;每次添加现读。 */
   maxFeeds: number;
-  /** 新源的默认通知策略:notify 实时 / digest 只进晨报 / mute 静默入库。 */
-  notifyDefault: string;
   /** 事件合批窗口(秒)。 */
   eventBatchSeconds: number;
   /** 单条事件最多的头条数。 */
   eventMaxHeadlines: number;
   /** 单条事件的字符上限。 */
   eventMaxChars: number;
-  /** 全局关注关键词,逗号分隔;命中的条目排在事件前面并在 meta 里标记。 */
+  /** 全局关注关键词,逗号分隔;命中的条目排在事件前面。 */
   watchKeywords: string;
-  /** 免打扰时段 "23:00-08:00";空 = 关闭。按时区判定。 */
-  quietHours: string;
   /** 每日晨报开关。 */
   digestEnabled: boolean;
   /** 晨报时刻 "09:00"(部署时区)。 */
   digestTime: string;
-  /** 新订阅立刻推送的最新 N 条(其余只入库不推送)。 */
-  baselineNotifyCount: number;
   /** 事件送达后是否顺手标已读。默认关:推送不等于用户看过。 */
   autoMarkReadOnNotify: boolean;
   /** 条目保留天数;compact 每轮现读,改了即时生效。 */
@@ -41,13 +35,9 @@ export interface RssConfigSection {
   maxItemsPerFeed: number;
   /** 新订阅的历史条目标为已读(不污染未读);默认开。 */
   baselineAsRead: boolean;
-  /** 轮询请求的 User-Agent;单源可在面板里覆盖。 */
-  userAgent: string;
 }
 
 export const RSS_ID = 'rss';
-
-export const DEFAULT_USER_AGENT = 'CoopanionRSS/0.1 (Cortico World; +user-configured feeds)';
 
 export const NOTIFY_MODES = ['notify', 'digest', 'mute'] as const;
 export type NotifyMode = (typeof NOTIFY_MODES)[number];
@@ -58,21 +48,17 @@ export const RSS_DEFAULTS: RssConfigSection = {
   pollConcurrency: 4,
   requestTimeoutMs: 15_000,
   maxFeeds: 50,
-  notifyDefault: 'notify',
   eventBatchSeconds: 20,
   eventMaxHeadlines: 8,
   eventMaxChars: 1200,
   watchKeywords: '',
-  quietHours: '',
   digestEnabled: false,
   digestTime: '09:00',
-  baselineNotifyCount: 0,
   autoMarkReadOnNotify: false,
   retentionDays: 30,
   maxItemsTotal: 2_000,
   maxItemsPerFeed: 200,
   baselineAsRead: true,
-  userAgent: DEFAULT_USER_AGENT,
 };
 
 /** World 配置的 JSON Schema 声明;每个路径都必须落在 worlds.rss. 段内。 */
@@ -121,13 +107,6 @@ export function rssConfigGroup(language: Language): ConfigGroup {
           maximum: 500,
           'x-hot': true,
         },
-        'worlds.rss.notifyDefault': {
-          type: 'string',
-          title: t.notifyDefaultTitle,
-          description: t.notifyDefaultDescription,
-          enum: [...NOTIFY_MODES],
-          'x-hot': true,
-        },
         'worlds.rss.eventBatchSeconds': {
           type: 'integer',
           title: t.eventBatchTitle,
@@ -160,12 +139,6 @@ export function rssConfigGroup(language: Language): ConfigGroup {
           description: t.watchKeywordsDescription,
           'x-hot': true,
         },
-        'worlds.rss.quietHours': {
-          type: 'string',
-          title: t.quietHoursTitle,
-          description: t.quietHoursDescription,
-          'x-hot': true,
-        },
         'worlds.rss.digestEnabled': {
           type: 'boolean',
           title: t.digestEnabledTitle,
@@ -176,14 +149,6 @@ export function rssConfigGroup(language: Language): ConfigGroup {
           type: 'string',
           title: t.digestTimeTitle,
           description: t.digestTimeDescription,
-          'x-hot': true,
-        },
-        'worlds.rss.baselineNotifyCount': {
-          type: 'integer',
-          title: t.baselineNotifyTitle,
-          description: t.baselineNotifyDescription,
-          minimum: 0,
-          maximum: 5,
           'x-hot': true,
         },
         'worlds.rss.autoMarkReadOnNotify': {
@@ -222,12 +187,6 @@ export function rssConfigGroup(language: Language): ConfigGroup {
           description: t.baselineAsReadDescription,
           'x-hot': true,
         },
-        'worlds.rss.userAgent': {
-          type: 'string',
-          title: t.userAgentTitle,
-          description: t.userAgentDescription,
-          'x-hot': true,
-        },
       },
     },
   };
@@ -256,7 +215,6 @@ export function rssConfigGroups(language: Language): ConfigGroup[] {
         'worlds.rss.pollConcurrency',
         'worlds.rss.requestTimeoutMs',
         'worlds.rss.maxFeeds',
-        'worlds.rss.userAgent',
       ],
       `world:${RSS_ID}.polling`,
       t.groupPollingTitle,
@@ -264,15 +222,12 @@ export function rssConfigGroups(language: Language): ConfigGroup[] {
     ),
     pick(
       [
-        'worlds.rss.notifyDefault',
         'worlds.rss.eventBatchSeconds',
         'worlds.rss.eventMaxHeadlines',
         'worlds.rss.eventMaxChars',
         'worlds.rss.watchKeywords',
-        'worlds.rss.quietHours',
         'worlds.rss.digestEnabled',
         'worlds.rss.digestTime',
-        'worlds.rss.baselineNotifyCount',
         'worlds.rss.autoMarkReadOnNotify',
       ],
       `world:${RSS_ID}.notify`,

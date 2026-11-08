@@ -1,5 +1,5 @@
 /**
- * 时区时间工具:免打扰时段判定与晨报时刻计算,全部以 IANA 时区名为准(来自 ctx.timezone)。
+ * 时区时间工具:晨报时刻计算与相对时间,全部以 IANA 时区名为准(来自 ctx.timezone)。
  * 纯函数,可单测。
  */
 
@@ -12,32 +12,6 @@ export function parseHm(raw: string | null | undefined): number | null {
   const minute = Number(match[2]);
   if (hour > 23 || minute > 59) return null;
   return hour * 60 + minute;
-}
-
-/** "23:00-08:00" → { start: 1380, end: 480 };非法返回 null。 */
-export function parseQuietHours(raw: string | null | undefined): { start: number; end: number } | null {
-  if (!raw || !raw.trim()) return null;
-  const match = /^\s*(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})\s*$/.exec(raw);
-  if (!match) return null;
-  const start = parseHm(match[1]);
-  const end = parseHm(match[2]);
-  if (start == null || end == null) return null;
-  return { start, end };
-}
-
-/** date 在时区里的一天第几分钟(0..1439)。 */
-export function minuteOfDayIn(timezone: string, date: Date): number {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    hour12: false,
-    hour: '2-digit',
-    minute: '2-digit',
-  }).formatToParts(date);
-  const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? '0');
-  const minute = Number(parts.find((p) => p.type === 'minute')?.value ?? '0');
-  // '24:xx'(kai 时制边缘)按 0 处理。
-  const safeHour = hour === 24 ? 0 : hour;
-  return safeHour * 60 + minute;
 }
 
 function datePartsIn(timezone: string, date: Date): { year: number; month: number; day: number } {
@@ -74,27 +48,6 @@ function zonedTime(timezone: string, year: number, month: number, day: number, m
   let result = naive - tzOffsetMs(timezone, new Date(naive));
   result = naive - tzOffsetMs(timezone, new Date(result));
   return new Date(result);
-}
-
-/** 此刻是否在免打扰时段内(支持跨零点)。 */
-export function isQuietNow(quiet: { start: number; end: number }, timezone: string, now: Date): boolean {
-  const minute = minuteOfDayIn(timezone, now);
-  if (quiet.start === quiet.end) return false;
-  if (quiet.start < quiet.end) return minute >= quiet.start && minute < quiet.end;
-  return minute >= quiet.start || minute < quiet.end;
-}
-
-/** 免打扰结束的下一次时刻;不在时段内返回 null。 */
-export function nextQuietEnd(quiet: { start: number; end: number }, timezone: string, now: Date): Date | null {
-  if (!isQuietNow(quiet, timezone, now)) return null;
-  const parts = datePartsIn(timezone, now);
-  let candidate = zonedTime(timezone, parts.year, parts.month, parts.day, quiet.end);
-  if (candidate.getTime() <= now.getTime()) {
-    const tomorrow = new Date(now.getTime() + 26 * 3600 * 1000);
-    const nextParts = datePartsIn(timezone, tomorrow);
-    candidate = zonedTime(timezone, nextParts.year, nextParts.month, nextParts.day, quiet.end);
-  }
-  return candidate;
 }
 
 /** 时区里"今天 minuteOfDay"的下一次到达时刻;若恰在此刻之后的 60s 内也算它。 */

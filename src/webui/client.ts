@@ -16,7 +16,7 @@ interface Overview {
   unread: number;
   fetched24h: number;
   failing: Array<{ id: string; title: string; error: string | null }>;
-  quiet: boolean;
+  defaultUserAgent: string;
   limits: { retentionDays: number; maxItemsTotal: number; maxItemsPerFeed: number };
 }
 
@@ -32,10 +32,7 @@ interface FeedRow {
   lastOkAt: string | null;
   unread: number;
   userAgent: string;
-  allowPrivate?: boolean;
   fullText?: boolean;
-  include?: string[];
-  exclude?: string[];
   createdAt?: string;
   nextPollAt?: string | null;
 }
@@ -95,6 +92,16 @@ function hintMark(ctx: WebUiPanelContext, text: string): HTMLElement {
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * 存储值 → `<input type="time">` 能接受的 `HH:MM`。
+ * 小时补两位:旧版文本输入允许 `9:00`(服务端校验也放行),而 time 控件只认 `09:00`,
+ * 直接赋值会被浏览器静默拒绝、回填成空。非法值给空串。
+ */
+function timeValue(raw: unknown): string {
+  const match = /^\s*(\d{1,2}):(\d{2})\s*$/.exec(typeof raw === 'string' ? raw : '');
+  return match ? `${match[1].padStart(2, '0')}:${match[2]}` : '';
 }
 
 function timeShort(iso: string): string {
@@ -439,16 +446,16 @@ function mountFeeds(ctx: WebUiPanelContext): void {
   ctx.root.appendChild(feedsSheet.el);
   ctx.root.appendChild(message);
 
+  /** overview 返回的默认 UA(含插件版本号),用作单源 UA 输入框的占位提示。 */
+  let defaultUserAgent = '';
+
   // ── 表单字段装配(添加与详情共用) ─────────────────────────────────
   interface FormControls {
     title: HTMLInputElement;
     notify: HTMLSelectElement;
     interval: HTMLInputElement;
     userAgent: HTMLInputElement;
-    allowPrivate: HTMLInputElement;
     fullText: HTMLInputElement;
-    include: HTMLInputElement;
-    exclude: HTMLInputElement;
   }
 
   /** 弹框表单的一行:cells 依次排开;固定宽度的格子用 width,弹性的用 grow。 */
@@ -462,6 +469,16 @@ function mountFeeds(ctx: WebUiPanelContext): void {
     return row;
   }
 
+  /** 弹框底部操作行:上分割线把按钮与配置项分开。 */
+  function dialogActions(...controls: HTMLElement[]): HTMLElement {
+    const bar = ctx.ui.rowbar();
+    bar.style.borderTop = '1px solid var(--line)';
+    bar.style.paddingTop = '14px';
+    bar.style.marginTop = '6px';
+    bar.append(...controls);
+    return bar;
+  }
+
   /** 勾选框 + "!"悬浮提示标记(解释收进 title,悬停出气泡);两组合进一行。 */
   function checkGroup(check: { el: HTMLElement; input: HTMLInputElement }, hint: string): HTMLElement {
     const cell = ctx.ui.h('div', null);
@@ -472,46 +489,44 @@ function mountFeeds(ctx: WebUiPanelContext): void {
   }
 
   function buildFormFields(body: HTMLElement, feed?: FeedRow): FormControls {
-    const title = ctx.ui.input({ placeholder: t.fieldTitle });
+    const title = ctx.ui.input({ placeholder: t.fieldTitlePlaceholder });
     title.value = feed?.title ?? '';
     const notify = ctx.ui.select();
     for (const [value, label] of [['notify', t.notifyBadge.notify], ['digest', t.notifyBadge.digest], ['mute', t.notifyBadge.mute]] as const) {
       notify.appendChild(new Option(label, value));
     }
     notify.value = feed?.notify ?? 'notify';
-    const interval = ctx.ui.input({ type: 'number' });
-    interval.value = feed ? String(feed.intervalMinutes) : '';
-    const userAgent = ctx.ui.input({ placeholder: t.fieldUA, cls: 'mono' });
+    const interval = ctx.ui.input({ type: 'number', placeholder: t.fieldIntervalPlaceholder });
+    interval.min = '1';
+    interval.value = feed && feed.intervalMinutes > 0 ? String(feed.intervalMinutes) : '';
+    const userAgent = ctx.ui.input({ placeholder: defaultUserAgent || 'Coopanion RSS Reader', cls: 'mono' });
     userAgent.value = feed?.userAgent ?? '';
-    const allowPrivate = ctx.ui.checkbox(t.fieldAllowPrivate);
-    allowPrivate.setChecked(feed?.allowPrivate === true);
     const fullText = ctx.ui.checkbox(t.fieldFullText);
     fullText.setChecked(feed ? feed.fullText !== false : true);
-    const include = ctx.ui.input({ placeholder: t.fieldInclude });
-    include.value = (feed?.include ?? []).join(', ');
-    const exclude = ctx.ui.input({ placeholder: t.fieldExclude });
-    exclude.value = (feed?.exclude ?? []).join(', ');
 
     // 基础设置:短字段两两并排,控制弹框高度。
     body.appendChild(formRow([
-      { el: ctx.ui.field(t.fieldTitle, title), grow: true },
+      { el: ctx.ui.field(t.fieldTitle, title), width: '260px' },
       { el: ctx.ui.field(t.fieldNotify, notify), width: '190px' },
+      { el: ctx.ui.h('div', 'grow') },
     ]));
     body.appendChild(formRow([
       { el: ctx.ui.field(t.fieldInterval, interval), width: '190px' },
       { el: ctx.ui.field(t.fieldUA, userAgent), grow: true },
     ]));
-    // 抓取与过滤:两个开关一组、关键词一对,同宽两列。
+    // 抓取设置。
     body.appendChild(ctx.ui.h('div', 'sectionhead', t.sectionFetchTitle));
     body.appendChild(formRow([
-      { el: checkGroup(allowPrivate, t.fieldAllowPrivateHint), grow: true },
       { el: checkGroup(fullText, t.fieldFullTextHint), grow: true },
+      { el: ctx.ui.h('div', 'grow') },
     ]));
-    body.appendChild(formRow([
-      { el: ctx.ui.field(t.fieldInclude, include), grow: true },
-      { el: ctx.ui.field(t.fieldExclude, exclude), grow: true },
-    ]));
-    return { title, notify, interval, userAgent, allowPrivate: allowPrivate.input, fullText: fullText.input, include, exclude };
+    return { title, notify, interval, userAgent, fullText: fullText.input };
+  }
+
+  /** 检查间隔留空 = 用全局默认;填了就必须 ≥1 分钟。 */
+  function intervalValid(form: FormControls): boolean {
+    const raw = form.interval.value.trim();
+    return raw === '' || (Number.isFinite(Number(raw)) && Number(raw) >= 1);
   }
 
   function readForm(form: FormControls, url: string): Record<string, unknown> {
@@ -519,12 +534,9 @@ function mountFeeds(ctx: WebUiPanelContext): void {
       url,
       title: form.title.value.trim() || undefined,
       notify: form.notify.value,
-      intervalMinutes: form.interval.value ? Number(form.interval.value) : 0,
+      intervalMinutes: form.interval.value.trim() ? Number(form.interval.value.trim()) : 0,
       userAgent: form.userAgent.value.trim(),
-      allowPrivate: form.allowPrivate.checked,
       fullText: form.fullText.checked,
-      include: form.include.value.split(/[,，]/).map((k) => k.trim()).filter(Boolean),
-      exclude: form.exclude.value.split(/[,，]/).map((k) => k.trim()).filter(Boolean),
     };
   }
 
@@ -541,10 +553,7 @@ function mountFeeds(ctx: WebUiPanelContext): void {
       onClick: () => void dialogLocked(async () => {
         const url = urlInput.value.trim();
         if (!url) { dlgShow(t.needUrl, true); return; }
-        const result = await ctx.invoke<TestResult>('feeds.test', [{
-          url,
-          allowPrivate: form.allowPrivate.checked,
-        }]);
+        const result = await ctx.invoke<TestResult>('feeds.test', [{ url }]);
         // 识别成功:名称留空时自动填充。
         if (!form.title.value.trim() && result.title) form.title.value = result.title;
         const lines = [
@@ -560,6 +569,7 @@ function mountFeeds(ctx: WebUiPanelContext): void {
       onClick: () => void dialogLocked(async () => {
         const url = urlInput.value.trim();
         if (!url) { dlgShow(t.needUrl, true); return; }
+        if (!intervalValid(form)) { dlgShow(t.intervalMin, true); return; }
         const result = await ctx.invoke<{ id: string; title: string }>('feeds.add', [
           readForm(form, url),
         ]);
@@ -569,9 +579,7 @@ function mountFeeds(ctx: WebUiPanelContext): void {
         await refresh();
       }),
     });
-    const bar = ctx.ui.rowbar();
-    bar.append(testBtn, saveBtn);
-    body.appendChild(bar);
+    body.appendChild(dialogActions(saveBtn, testBtn));
     testLine.style.whiteSpace = 'pre-line';
     body.appendChild(testLine);
 
@@ -599,6 +607,7 @@ function mountFeeds(ctx: WebUiPanelContext): void {
     const saveBtn = ctx.ui.button(t.dialogUpdate, {
       variant: 'primary',
       onClick: () => void dialogLocked(async () => {
+        if (!intervalValid(form)) { dlgShow(t.intervalMin, true); return; }
         const values = readForm(form, feed.url);
         delete values.url;
         await ctx.invoke('feeds.update', [{ id: feed.id, patch: values }]);
@@ -617,9 +626,7 @@ function mountFeeds(ctx: WebUiPanelContext): void {
         await refresh();
       }),
     });
-    const bar = ctx.ui.rowbar();
-    bar.append(saveBtn, fetchBtn);
-    body.appendChild(bar);
+    body.appendChild(dialogActions(saveBtn, fetchBtn));
 
     const { closeDrawer, dlgShow, dialogLocked } = openDrawer(t.detailDialogTitle, body, [saveBtn, fetchBtn]);
     void closeDrawer;
@@ -755,6 +762,7 @@ function mountFeeds(ctx: WebUiPanelContext): void {
       cardUnread.value.textContent = String(overview.unread);
       cardUnread.value.parentElement?.classList.toggle('accent', overview.unread > 0);
       cardFresh.value.textContent = String(overview.fetched24h);
+      defaultUserAgent = overview.defaultUserAgent;
       renderFeeds(await ctx.invoke<FeedRow[]>('feeds.list'));
     } catch (error) {
       show(`${t.loadError}: ${errorText(error)}`, true);
@@ -864,16 +872,22 @@ function mountOpml(ctx: WebUiPanelContext): void {
 
 /**
  * 配置表单的通用装配:按字段说明铺 field,一个保存按钮收全部值提交 config.save。
- * 字段说明 kind:number(string 输入)/string/bool/enum(select)。
+ * 字段说明 kind:number(string 输入)/string/time(时间选择器)/bool/enum(select)。
  */
 interface FieldSpec {
   key: string;
   label: string;
-  kind: 'number' | 'string' | 'bool' | 'enum';
+  kind: 'number' | 'string' | 'time' | 'bool' | 'enum';
   options?: ReadonlyArray<{ value: string; label: string }>;
   placeholder?: string;
-  /** 字段下方的说明小字。 */
+  /** 说明小字;bool 渲染为勾选框旁的 ⓘ 提示。 */
   hint?: string;
+}
+
+/** 单个字段的取值/回填;复合控件在闭包里自行组装与拆解。 */
+interface FieldReader {
+  read(): string | number | boolean;
+  write(raw: unknown): void;
 }
 
 function mountConfigForm(
@@ -887,25 +901,35 @@ function mountConfigForm(
     message.textContent = body;
     message.classList.toggle('bad', bad);
   };
-  const inputs = new Map<string, HTMLInputElement | HTMLSelectElement>();
+  const readers = new Map<string, FieldReader>();
 
   for (const sheetSpec of sheets) {
     const sheet = ctx.ui.sheet({ title: sheetSpec.title, desc: sheetSpec.desc });
     for (const field of sheetSpec.fields) {
       if (field.kind === 'bool') {
         const check = ctx.ui.checkbox(field.label);
-        inputs.set(field.key, check.input);
+        readers.set(field.key, {
+          read: () => check.checked,
+          write: (raw) => check.setChecked(raw === true),
+        });
         if (field.hint) check.el.appendChild(hintMark(ctx, field.hint));
         check.el.style.marginTop = '14px';
         sheet.body.appendChild(check.el);
       } else if (field.kind === 'enum') {
         const select = ctx.ui.select();
         for (const option of field.options ?? []) select.appendChild(new Option(option.label, option.value));
-        inputs.set(field.key, select);
+        readers.set(field.key, {
+          read: () => select.value,
+          write: (raw) => { select.value = raw == null ? '' : String(raw); },
+        });
         sheet.body.appendChild(ctx.ui.field(field.label, select));
       } else {
         const input = ctx.ui.input({ type: field.kind === 'number' ? 'number' : 'text', placeholder: field.placeholder });
-        inputs.set(field.key, input);
+        if (field.kind === 'time') input.type = 'time';
+        readers.set(field.key, {
+          read: () => input.value,
+          write: (raw) => { input.value = field.kind === 'time' ? timeValue(raw) : raw == null ? '' : String(raw); },
+        });
         sheet.body.appendChild(ctx.ui.field(field.label, input));
       }
     }
@@ -916,10 +940,7 @@ function mountConfigForm(
     variant: 'primary',
     onClick: () => void locked(async () => {
       const patch: ConfigValues = {};
-      for (const [key, control] of inputs) {
-        if (control instanceof HTMLInputElement && control.type === 'checkbox') patch[key] = control.checked;
-        else patch[key] = control.value;
-      }
+      for (const [key, reader] of readers) patch[key] = reader.read();
       const result = await ctx.invoke<{ ok: boolean; restartRequired: boolean }>('config.save', [patch]);
       show(result.restartRequired ? `${t.savedConfig} ${t.restartHint}` : t.savedConfig, result.restartRequired);
       onSaved(result.restartRequired);
@@ -945,11 +966,7 @@ function mountConfigForm(
   void (async () => {
     try {
       const values = await ctx.invoke<ConfigValues>('config.get');
-      for (const [key, control] of inputs) {
-        const value = values[key];
-        if (control instanceof HTMLInputElement && control.type === 'checkbox') control.checked = value === true;
-        else control.value = value == null ? '' : String(value);
-      }
+      for (const [key, reader] of readers) reader.write(values[key]);
     } catch (error) {
       show(`${t.loadError}: ${errorText(error)}`, true);
     }
@@ -962,17 +979,10 @@ function mountNotify(ctx: WebUiPanelContext): void {
   mountConfigForm(ctx, [
     {
       title: t.sheetDisturbTitle,
-      desc: t.tabNotifyDesc,
+      desc: t.sheetDisturbDesc,
       fields: [
-        { key: 'notifyDefault', label: t.notifyDefaultTitle, kind: 'enum', options: [
-          { value: 'notify', label: t.notifyBadge.notify },
-          { value: 'digest', label: t.notifyBadge.digest },
-          { value: 'mute', label: t.notifyBadge.mute },
-        ] },
-        { key: 'quietHours', label: t.quietHoursTitle, kind: 'string', placeholder: '23:00-08:00' },
         { key: 'digestEnabled', label: t.digestEnabledTitle, kind: 'bool' },
-        { key: 'digestTime', label: t.digestTimeTitle, kind: 'string', placeholder: '09:00' },
-        { key: 'baselineNotifyCount', label: t.baselineNotifyTitle, kind: 'number' },
+        { key: 'digestTime', label: t.digestTimeTitle, kind: 'time' },
         { key: 'autoMarkReadOnNotify', label: t.autoMarkTitle, kind: 'bool' },
       ],
     },
@@ -1000,7 +1010,6 @@ function mountSettings(ctx: WebUiPanelContext): void {
         { key: 'pollConcurrency', label: t.pollConcurrencyTitle, kind: 'number' },
         { key: 'requestTimeoutMs', label: t.requestTimeoutTitle, kind: 'number' },
         { key: 'maxFeeds', label: t.maxFeedsTitle, kind: 'number' },
-        { key: 'userAgent', label: t.userAgentTitle, kind: 'string' },
       ],
     },
     {

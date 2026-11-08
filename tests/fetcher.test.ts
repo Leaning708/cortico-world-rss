@@ -1,50 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import { assertFetchableUrl, fetchText, FetchFailure } from '../src/fetcher.ts';
-import { isPrivateIp } from '../src/net.ts';
 
 const base = {
   timeoutMs: 1_000,
   maxBytes: 1_000_000,
   userAgent: 'test-agent',
-  allowPrivate: false,
-  resolve: async (host: string) => (host === '10.0.0.5' ? ['10.0.0.5'] : ['93.184.216.34']),
 };
 
 function jsonResponse(body: string, headers: Record<string, string> = {}, status = 200): Response {
   return new Response(body, { status, headers });
 }
 
-describe('isPrivateIp', () => {
-  it('识别 IPv4 私网/保留段', () => {
-    expect(isPrivateIp('127.0.0.1')).toBe(true);
-    expect(isPrivateIp('10.1.2.3')).toBe(true);
-    expect(isPrivateIp('192.168.1.1')).toBe(true);
-    expect(isPrivateIp('172.16.0.1')).toBe(true);
-    expect(isPrivateIp('172.32.0.1')).toBe(false);
-    expect(isPrivateIp('169.254.169.254')).toBe(true);
-    expect(isPrivateIp('100.64.0.1')).toBe(true);
-    expect(isPrivateIp('8.8.8.8')).toBe(false);
-  });
-  it('识别 IPv6 私网与 IPv4 映射', () => {
-    expect(isPrivateIp('::1')).toBe(true);
-    expect(isPrivateIp('fc00::1')).toBe(true);
-    expect(isPrivateIp('fe80::1')).toBe(true);
-    expect(isPrivateIp('::ffff:127.0.0.1')).toBe(true);
-    expect(isPrivateIp('::ffff:8.8.8.8')).toBe(false);
-    expect(isPrivateIp('2606:4700::1111')).toBe(false);
-  });
-});
-
 describe('assertFetchableUrl', () => {
-  it('拒绝非 http/https 与 localhost', async () => {
-    await expect(assertFetchableUrl('ftp://x.com', false, async () => ['1.2.3.4'])).rejects.toThrow(FetchFailure);
-    await expect(assertFetchableUrl('file:///etc/passwd', false, async () => ['1.2.3.4'])).rejects.toThrow(FetchFailure);
-    await expect(assertFetchableUrl('http://localhost:8080/f', false, async () => ['1.2.3.4'])).rejects.toThrow('私网');
-  });
-  it('DNS 解析到私网地址时拒绝;allowPrivate 放行;解析失败报 network', async () => {
-    await expect(assertFetchableUrl('http://intranet.local/f', false, async () => ['192.168.1.5'])).rejects.toThrow('私网');
-    await expect(assertFetchableUrl('http://intranet.local/f', true, async () => ['192.168.1.5'])).resolves.toBeInstanceOf(URL);
-    await expect(assertFetchableUrl('http://nx.local/f', false, async () => { throw new Error('ENOTFOUND'); })).rejects.toThrow('域名解析失败');
+  it('只接受 http/https;私网/本机地址默认允许', () => {
+    expect(() => assertFetchableUrl('ftp://x.com')).toThrow(FetchFailure);
+    expect(() => assertFetchableUrl('file:///etc/passwd')).toThrow(FetchFailure);
+    expect(() => assertFetchableUrl('不是地址')).toThrow(FetchFailure);
+    expect(assertFetchableUrl('http://localhost:8080/f')).toBeInstanceOf(URL);
+    expect(assertFetchableUrl('http://192.168.1.5/feed')).toBeInstanceOf(URL);
   });
 });
 
@@ -68,7 +41,7 @@ describe('fetchText', () => {
     expect(result.body).toBe('');
   });
 
-  it('跟随重定向且每一跳复查私网', async () => {
+  it('跟随重定向', async () => {
     const calls: string[] = [];
     const result = await fetchText({
       ...base,
@@ -84,12 +57,6 @@ describe('fetchText', () => {
     expect(calls).toHaveLength(2);
     expect(result.body).toBe('最终内容');
     expect(result.finalUrl).toBe('https://cdn.example.org/b');
-    // 重定向跳进私网 → 拒绝。
-    await expect(fetchText({
-      ...base,
-      url: 'https://example.org/a',
-      fetchImpl: async () => jsonResponse('', { location: 'http://10.0.0.5/secret' }, 302),
-    })).rejects.toThrow('私网');
     // 重定向超过 3 跳 → redirect 失败。
     await expect(fetchText({
       ...base,

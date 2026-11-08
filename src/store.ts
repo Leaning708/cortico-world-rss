@@ -18,17 +18,11 @@ export interface FeedRecord {
   notify: NotifyMode;
   /** 0 = 用全局默认。 */
   intervalMinutes: number;
-  /** 命中任一才推送(空 = 不过滤)。 */
-  include: string[];
-  /** 命中任一不推送。 */
-  exclude: string[];
   paused: boolean;
   /** 排序权重 1..5,仅影响事件内顺序。 */
   weight: number;
   /** 单源 UA 覆盖;空 = 用全局。 */
   userAgent: string;
-  /** 本源允许私网地址(自建 RSSHub 等);默认关,详情弹框里按源打开。 */
-  allowPrivate: boolean;
   /** 本源允许 rss_read(full) 抓原文页;默认开。 */
   fullText: boolean;
   createdAt: string;
@@ -98,15 +92,6 @@ function clampPublishedAt(iso: string | null, fetchedAt: Date): string {
   return new Date(ts).toISOString();
 }
 
-function asKeywordList(raw: unknown): string[] {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .filter((entry): entry is string => typeof entry === 'string')
-    .map((entry) => entry.trim())
-    .filter(Boolean)
-    .slice(0, 20);
-}
-
 export class RssStore {
   private feedsData: FeedsFile;
   private itemsData: ItemsFile;
@@ -128,11 +113,14 @@ export class RssStore {
     this.compact(new Date());
   }
 
-  /** 旧版本文件缺 allowPrivate/fullText 字段时补默认值(私有:加载即迁移)。 */
+  /** 旧版本文件缺 fullText 字段时补默认值(私有:加载即迁移);已移除的每源字段顺手清掉。 */
   private migrateFeeds(): void {
     for (const feed of this.feedsData.feeds) {
-      if (typeof feed.allowPrivate !== 'boolean') feed.allowPrivate = false;
       if (typeof feed.fullText !== 'boolean') feed.fullText = true;
+      const legacy = feed as unknown as Record<string, unknown>;
+      delete legacy.include;
+      delete legacy.exclude;
+      delete legacy.allowPrivate;
     }
   }
 
@@ -182,11 +170,8 @@ export class RssStore {
     title: string;
     notify?: NotifyMode;
     intervalMinutes?: number;
-    include?: string[];
-    exclude?: string[];
     weight?: number;
     userAgent?: string;
-    allowPrivate?: boolean;
     fullText?: boolean;
   }): FeedRecord {
     const feed: FeedRecord = {
@@ -195,12 +180,9 @@ export class RssStore {
       title: input.title.trim() || input.url,
       notify: input.notify ?? 'notify',
       intervalMinutes: Math.max(0, Math.floor(input.intervalMinutes ?? 0)),
-      include: asKeywordList(input.include),
-      exclude: asKeywordList(input.exclude),
       paused: false,
       weight: Math.min(5, Math.max(1, Math.floor(input.weight ?? 1))),
       userAgent: (input.userAgent ?? '').trim(),
-      allowPrivate: input.allowPrivate === true,
       fullText: input.fullText !== false,
       createdAt: new Date().toISOString(),
       etag: null,
@@ -220,15 +202,13 @@ export class RssStore {
 
   /** 白名单字段更新;返回更新后的记录。 */
   updateFeed(id: string, patch: Partial<Pick<FeedRecord,
-    'title' | 'notify' | 'intervalMinutes' | 'include' | 'exclude' | 'paused' | 'weight' | 'userAgent' | 'allowPrivate' | 'fullText'
+    'title' | 'notify' | 'intervalMinutes' | 'paused' | 'weight' | 'userAgent' | 'fullText'
   >>): FeedRecord | undefined {
     const feed = this.feed(id);
     if (!feed) return undefined;
     if (patch.title != null) feed.title = patch.title.trim() || feed.title;
     if (patch.notify != null) feed.notify = patch.notify;
     if (patch.intervalMinutes != null) feed.intervalMinutes = Math.max(0, Math.floor(patch.intervalMinutes));
-    if (patch.include != null) feed.include = asKeywordList(patch.include);
-    if (patch.exclude != null) feed.exclude = asKeywordList(patch.exclude);
     if (patch.paused != null) {
       feed.paused = patch.paused;
       // 恢复时立刻排一次,暂停时清掉排程。
@@ -236,7 +216,6 @@ export class RssStore {
     }
     if (patch.weight != null) feed.weight = Math.min(5, Math.max(1, Math.floor(patch.weight)));
     if (patch.userAgent != null) feed.userAgent = patch.userAgent.trim();
-    if (patch.allowPrivate != null) feed.allowPrivate = patch.allowPrivate === true;
     if (patch.fullText != null) feed.fullText = patch.fullText !== false;
     this.dirty = true;
     return feed;

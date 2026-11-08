@@ -51,7 +51,7 @@ describe.skipIf(!ENABLED)('live:本地 RSS 服务器全链路', () => {
   });
 
   it('添加动态 RSS 源 → 历史静默', async () => {
-    const receipt = await tools.rss_add({ url: `${BASE}/rss.xml`, allowPrivate: true }) as string;
+    const receipt = await tools.rss_add({ url: `${BASE}/rss.xml` }) as string;
     expect(receipt).toContain('已订阅「本地 RSS 测试源」');
     expect(receipt).toContain('欢迎条目');
   });
@@ -83,22 +83,22 @@ describe.skipIf(!ENABLED)('live:本地 RSS 服务器全链路', () => {
   });
 
   it('GBK 源中文正常解析', async () => {
-    const receipt = await tools.rss_add({ url: `${BASE}/gbk.xml`, allowPrivate: true }) as string;
+    const receipt = await tools.rss_add({ url: `${BASE}/gbk.xml` }) as string;
     expect(receipt).toContain('GBK 编码测试源');
     expect(receipt).toContain('中文编码测试');
   });
 
   it('站点页自动发现', async () => {
-    const receipt = await tools.rss_add({ url: `${BASE}/site`, allowPrivate: true }) as string;
+    const receipt = await tools.rss_add({ url: `${BASE}/site` }) as string;
     expect(receipt).toContain('自动发现');
   });
 
   it('坏源拒绝;错误码源给诊断', async () => {
     // /broken.xml 实际是无 feed 链接的 HTML 页面 → 自动发现失败 → 拒绝。
     const unwrap = (value: unknown): string => (typeof value === 'string' ? value : String((value as { text?: string }).text ?? ''));
-    const broken = unwrap(await tools.rss_add({ url: `${BASE}/broken.xml`, allowPrivate: true }));
+    const broken = unwrap(await tools.rss_add({ url: `${BASE}/broken.xml` }));
     expect(broken).toContain('订阅失败');
-    const notFound = unwrap(await tools.rss_add({ url: `${BASE}/error/404`, allowPrivate: true }));
+    const notFound = unwrap(await tools.rss_add({ url: `${BASE}/error/404` }));
     expect(notFound).toContain('订阅失败');
     expect(notFound).toContain('404');
   });

@@ -5,8 +5,8 @@ import { RSS_CONFIG_KEYS, sanitizeConfigPatch } from '../src/config-save.ts';
 const current: RssConfigSection = { ...RSS_DEFAULTS };
 
 describe('sanitizeConfigPatch', () => {
-  it('白名单恰好 19 个旋钮,不含 enabled', () => {
-    expect(RSS_CONFIG_KEYS).toHaveLength(19);
+  it('白名单恰好 16 个旋钮,不含 enabled', () => {
+    expect(RSS_CONFIG_KEYS).toHaveLength(15);
     expect(RSS_CONFIG_KEYS).not.toContain('enabled');
   });
 
@@ -23,14 +23,10 @@ describe('sanitizeConfigPatch', () => {
     expect(sanitizeConfigPatch({ digestEnabled: 'yes' }, current).patch.digestEnabled).toBe(false);
   });
 
-  it('字符串校验:notify 枚举、quietHours/digestTime 格式、trim', () => {
-    expect(sanitizeConfigPatch({ quietHours: ' 23:00-08:00 ' }, current).patch.quietHours).toBe('23:00-08:00');
-    expect(sanitizeConfigPatch({ quietHours: '' }, current).patch.quietHours).toBe('');
+  it('字符串校验:digestTime 格式、trim', () => {
     expect(sanitizeConfigPatch({ digestTime: '09:30' }, current).patch.digestTime).toBe('09:30');
-    expect(() => sanitizeConfigPatch({ notifyDefault: 'bomb' }, current)).toThrow('notifyDefault');
-    expect(() => sanitizeConfigPatch({ quietHours: '25:00-08:00' }, current)).toThrow('HH:MM');
+    expect(sanitizeConfigPatch({ watchKeywords: ' AI , 模型 ' }, current).patch.watchKeywords).toBe('AI , 模型');
     expect(() => sanitizeConfigPatch({ digestTime: '9点' }, current)).toThrow('HH:MM');
-    expect(() => sanitizeConfigPatch({ userAgent: 'x'.repeat(301) }, current)).toThrow('User-Agent');
   });
 
   it('白名单外的键整单拒绝,enabled 不可保存', () => {

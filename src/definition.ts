@@ -6,7 +6,7 @@ import { RSS_EVENT_DESCS, RSS_SUMMARIES, RSS_TOOL_DECLS, RssWorld } from './worl
 export const RSS: WorldDefinition<RssConfigSection> = {
   id: 'rss',
   label: 'RSS 订阅',
-  // `ctx.cfg` 是 worlds.rss 的活引用:轮询间隔、免打扰、关键词等热改即生效。
+  // `ctx.cfg` 是 worlds.rss 的活引用:轮询间隔、晨报、关键词等热改即生效。
   defaults: () => ({ ...RSS_DEFAULTS }),
   create: (ctx) => new RssWorld({
     cfg: ctx.cfg,

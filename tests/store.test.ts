@@ -128,13 +128,13 @@ describe('RssStore', () => {
     expect(() => JSON.parse(readFileSync(join(broken, 'rss-feeds.json'), 'utf8'))).not.toThrow();
   });
 
-  it('旧版本 feeds 文件缺 allowPrivate/fullText 时迁移补默认值', () => {
+  it('旧版本 feeds 文件缺 fullText 时迁移补默认值,并清掉已移除字段', () => {
     const dir = mkdtempSync(join(tmpdir(), 'rss-migrate-'));
     writeFileSync(join(dir, 'rss-feeds.json'), JSON.stringify({
       version: 1,
       feeds: [{
         id: 'f_old', url: 'https://old.org/feed', title: '旧源', notify: 'notify',
-        intervalMinutes: 0, include: [], exclude: [], paused: false, weight: 1,
+        intervalMinutes: 0, include: [], exclude: [], allowPrivate: true, paused: false, weight: 1,
         userAgent: '', createdAt: '2026-10-01T00:00:00Z',
         etag: null, lastModified: null, lastFetchAt: null, lastOkAt: null, lastError: null,
         consecutiveErrors: 0, nextPollAt: null, backoffIndex: 0, seenKeys: [],
@@ -142,22 +142,21 @@ describe('RssStore', () => {
     }), 'utf8');
     const store = new RssStore(dir);
     const feed = store.feeds()[0];
-    expect(feed?.allowPrivate).toBe(false);
+    expect((feed as unknown as Record<string, unknown>).allowPrivate).toBeUndefined();
     expect(feed?.fullText).toBe(true);
+    // 已移除的每源关键词字段在加载时清掉。
+    expect((feed as unknown as Record<string, unknown>).include).toBeUndefined();
+    expect((feed as unknown as Record<string, unknown>).exclude).toBeUndefined();
   });
 
-  it('createFeed/updateFeed 支持 allowPrivate/fullText 按源开关', () => {
+  it('createFeed/updateFeed 支持 fullText 按源开关', () => {
     const { store } = makeStore();
-    const feed = store.createFeed({ url: 'https://a.com/feed', title: 'A', allowPrivate: true, fullText: false });
-    expect(feed.allowPrivate).toBe(true);
+    const feed = store.createFeed({ url: 'https://a.com/feed', title: 'A', fullText: false });
     expect(feed.fullText).toBe(false);
-    store.updateFeed(feed.id, { fullText: true, allowPrivate: false });
-    const updated = store.feed(feed.id);
-    expect(updated?.fullText).toBe(true);
-    expect(updated?.allowPrivate).toBe(false);
-    // 默认:new 源 fullText 开、allowPrivate 关。
+    store.updateFeed(feed.id, { fullText: true });
+    expect(store.feed(feed.id)?.fullText).toBe(true);
+    // 默认:new 源 fullText 开。
     const plain = store.createFeed({ url: 'https://b.com/feed', title: 'B' });
-    expect(plain.allowPrivate).toBe(false);
     expect(plain.fullText).toBe(true);
   });
 

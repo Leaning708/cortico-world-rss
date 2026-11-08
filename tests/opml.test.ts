@@ -5,7 +5,7 @@ import type { FeedRecord } from '../src/store.ts';
 function fakeFeed(overrides: Partial<FeedRecord>): FeedRecord {
   return {
     id: 'f_1', url: 'https://a.com/feed', title: 'A 源', notify: 'notify', intervalMinutes: 0,
-    include: [], exclude: [], paused: false, weight: 1, userAgent: '', allowPrivate: false, fullText: true, createdAt: '2026-11-01T00:00:00Z',
+    paused: false, weight: 1, userAgent: '', fullText: true, createdAt: '2026-11-01T00:00:00Z',
     etag: null, lastModified: null, lastFetchAt: null, lastOkAt: null, lastError: null,
     consecutiveErrors: 0, nextPollAt: null, backoffIndex: 0, seenKeys: [],
     ...overrides,

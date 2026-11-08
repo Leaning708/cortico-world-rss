@@ -6,7 +6,7 @@ var zh = {
   promptDocTitle: "\u73AF\u5883\u63D0\u793A\u8BCD",
   promptDocDescription: "Coo \u8F6C\u8FF0 RSS \u5185\u5BB9\u7684\u884C\u4E3A\u8BF4\u660E(\u8F6C\u8FF0\u65B9\u5F0F\u3001\u8BA2\u9605\u7BA1\u7406\u3001\u6CE8\u5165\u9632\u7EBF),\u53EF\u5728\u6B64\u67E5\u770B\u4E0E\u4FEE\u6539\u3002",
   groupPollingTitle: "\u8F6E\u8BE2\u4E0E\u7F51\u7EDC",
-  groupPollingDescription: "\u68C0\u67E5\u66F4\u65B0\u7684\u9891\u7387\u3001\u5E76\u53D1\u4E0E\u8BF7\u6C42\u65B9\u5F0F\uFF1B\u5355\u6E90\u7684\u95F4\u9694\u4E0E\u5173\u952E\u8BCD\u5728\u300C\u8BA2\u9605\u7BA1\u7406\u300D\u9762\u677F\u6309\u6E90\u8BBE\u7F6E\u3002",
+  groupPollingDescription: "\u68C0\u67E5\u66F4\u65B0\u7684\u9891\u7387\u3001\u5E76\u53D1\u4E0E\u8BF7\u6C42\u65B9\u5F0F\uFF1B\u5355\u6E90\u7684\u95F4\u9694\u5728\u300C\u8BA2\u9605\u6E90\u300D\u9762\u677F\u6309\u6E90\u8BBE\u7F6E\u3002",
   groupNotifyTitle: "\u901A\u77E5\u7B56\u7565",
   groupNotifyDescription: "\u65B0\u5185\u5BB9\u600E\u4E48\u5408\u5E76\u3001\u4EC0\u4E48\u65F6\u5019\u6253\u6270\u4F60\u3002",
   groupDataTitle: "\u9605\u8BFB\u4E0E\u6570\u636E",
@@ -19,8 +19,6 @@ var zh = {
   requestTimeoutDescription: "\u5355\u6B21\u62C9\u53D6\u7684\u8D85\u65F6\u65F6\u95F4\u3002",
   maxFeedsTitle: "\u8BA2\u9605\u5BB9\u91CF",
   maxFeedsDescription: "\u6700\u591A\u53EF\u8BA2\u9605\u7684\u6E90\u6570\u91CF\u3002",
-  notifyDefaultTitle: "\u65B0\u6E90\u9ED8\u8BA4\u901A\u77E5\u7B56\u7565",
-  notifyDefaultDescription: "notify \u5B9E\u65F6\u63A8\u9001\uFF1Bdigest \u53EA\u8FDB\u6BCF\u65E5\u6668\u62A5\uFF1Bmute \u9759\u9ED8\u5165\u5E93\uFF0C\u53EA\u5728\u6536\u4EF6\u7BB1\u53EF\u89C1\u3002",
   eventBatchTitle: "\u4E8B\u4EF6\u5408\u6279\u7A97\u53E3",
   eventBatchDescription: "\u591A\u6761\u65B0\u5185\u5BB9\u5728\u8FD9\u6BB5\u65F6\u95F4\u5185\u5408\u5E76\u6210\u4E00\u6761\u901A\u77E5\u3002",
   eventMaxHeadlinesTitle: "\u5355\u6761\u901A\u77E5\u5934\u6761\u6570",
@@ -29,14 +27,10 @@ var zh = {
   eventMaxCharsDescription: "\u901A\u77E5\u6B63\u6587\u7684\u957F\u5EA6\u4E0A\u9650\u3002",
   watchKeywordsTitle: "\u5173\u6CE8\u5173\u952E\u8BCD",
   watchKeywordsDescription: "\u9017\u53F7\u5206\u9694\uFF1B\u6807\u9898\u6216\u6458\u8981\u547D\u4E2D\u7684\u6761\u76EE\u4F1A\u6392\u5728\u901A\u77E5\u524D\u9762\u3002",
-  quietHoursTitle: "\u514D\u6253\u6270\u65F6\u6BB5",
-  quietHoursDescription: "\u683C\u5F0F 23:00-08:00\uFF0C\u53EF\u8DE8\u96F6\u70B9\uFF1B\u65F6\u6BB5\u5185\u65B0\u6D88\u606F\u6512\u7740\uFF0C\u7ED3\u675F\u65F6\u4E00\u6B21\u9001\u8FBE\u3002\u7559\u7A7A\u5173\u95ED\u3002",
   digestEnabledTitle: "\u6BCF\u65E5\u6668\u62A5",
   digestEnabledDescription: "\u6BCF\u5929\u56FA\u5B9A\u65F6\u523B\u628A\u8FD1 24 \u5C0F\u65F6\u7684\u65B0\u5185\u5BB9\u6C47\u603B\u6210\u4E00\u6761\u6D88\u606F\u3002",
   digestTimeTitle: "\u6668\u62A5\u65F6\u523B",
   digestTimeDescription: "24 \u5C0F\u65F6\u5236\uFF0C\u4F8B\u5982 09:00\u3002",
-  baselineNotifyTitle: "\u65B0\u8BA2\u9605\u7ACB\u5373\u63A8\u9001\u6761\u6570",
-  baselineNotifyDescription: "\u521A\u8BA2\u9605\u7684\u6E90\uFF0C\u628A\u6700\u65B0 N \u6761\u5F53\u4F5C\u65B0\u6D88\u606F\u63A8\u9001\uFF1B0 \u8868\u793A\u5386\u53F2\u5168\u90E8\u9759\u9ED8\u3002",
   autoMarkTitle: "\u63A8\u9001\u5373\u6807\u5DF2\u8BFB",
   autoMarkTitle2: "",
   autoMarkDescription: "\u901A\u77E5\u9001\u8FBE\u540E\u81EA\u52A8\u628A\u5BF9\u5E94\u6761\u76EE\u6807\u4E3A\u5DF2\u8BFB\u3002\u9ED8\u8BA4\u5173\uFF1A\u63A8\u9001\u4E0D\u7B49\u4E8E\u770B\u8FC7\u3002",
@@ -49,8 +43,6 @@ var zh = {
   baselineAsReadDescription: "\u5173\u95ED\u540E\uFF0C\u65B0\u8BA2\u9605\u6E90\u7684\u5386\u53F2\u6761\u76EE\u5C06\u8BA1\u5165\u672A\u8BFB\u6570\u3002",
   inboxDesc: (r, total, per) => `\u6761\u76EE\u4FDD\u7559 ${r} \u5929 \xB7 \u5168\u5E93\u4E0A\u9650 ${total} \u6761 \xB7 \u6BCF\u6E90\u4E0A\u9650 ${per} \u6761\uFF1B\u661F\u6807\u8C41\u514D\u81EA\u52A8\u6E05\u7406\u3002`,
   retentionDescription: "\u8D85\u8FC7\u4FDD\u7559\u671F\u7684\u6761\u76EE\u4F1A\u88AB\u6E05\u7406\uFF0C\u661F\u6807\u7684\u9664\u5916\uFF1B\u91CD\u542F World \u751F\u6548\u3002",
-  userAgentTitle: "\u9ED8\u8BA4 User-Agent",
-  userAgentDescription: "\u62C9\u53D6\u6E90\u65F6\u4F7F\u7528\u7684\u515C\u5E95 UA;\u5355\u4E2A\u6E90\u53EF\u5728\u8BA2\u9605\u8BE6\u60C5\u91CC\u8986\u76D6\u3002",
   lampPoll: "\u8F6E\u8BE2",
   lampPollOnline: "\u6B63\u5E38",
   lampPollOffline: "\u6CA1\u6709\u8BA2\u9605\u6E90",
@@ -64,12 +56,13 @@ var zh = {
   tabOpml: "OPML",
   tabNotify: "\u901A\u77E5",
   tabNotifyDesc: "\u65B0\u5185\u5BB9\u600E\u4E48\u5408\u5E76\u3001\u4EC0\u4E48\u65F6\u5019\u6253\u6270\u4F60\uFF1B\u4FDD\u5B58\u7ACB\u5373\u751F\u6548\u3002",
-  tabSettings: "\u8BBE\u7F6E",
+  tabSettings: "\u9AD8\u7EA7",
   tabSettingsDesc: "\u8F6E\u8BE2\u9891\u7387\u3001\u7F51\u7EDC\u884C\u4E3A\u4E0E\u672C\u673A\u6570\u636E\u4FDD\u7559\u3002",
   saveConfig: "\u4FDD\u5B58\u914D\u7F6E",
   savedConfig: "\u914D\u7F6E\u5DF2\u4FDD\u5B58\u3002",
   restartHint: "\u300C\u6761\u76EE\u4FDD\u7559\u5929\u6570\u300D\u7684\u6539\u52A8\u9700\u8981\u91CD\u542F World \u540E\u751F\u6548\u3002",
-  sheetDisturbTitle: "\u6253\u6270\u65F6\u673A",
+  sheetDisturbTitle: "\u6668\u62A5\u4E0E\u5DF2\u8BFB",
+  sheetDisturbDesc: "\u6BCF\u65E5\u6668\u62A5\u7684\u6C47\u603B\u65F6\u523B\uFF0C\u4EE5\u53CA\u63A8\u9001\u540E\u662F\u5426\u81EA\u52A8\u6807\u4E3A\u5DF2\u8BFB\u3002",
   sheetBatchTitle: "\u5408\u6279\u4E0E\u5173\u952E\u8BCD",
   statsTitle: "\u6982\u89C8",
   statFeeds: "\u8BA2\u9605\u6E90",
@@ -85,15 +78,14 @@ var zh = {
   detailNextPoll: "\u4E0B\u6B21\u68C0\u67E5",
   detailPaused: "\u5DF2\u6682\u505C",
   fieldTitle: "\u540D\u79F0",
+  fieldTitlePlaceholder: "\u9ED8\u8BA4\u81EA\u52A8\u8BC6\u522B",
   fieldNotify: "\u901A\u77E5\u7B56\u7565",
-  fieldInterval: "\u68C0\u67E5\u95F4\u9694(\u5206\u949F\uFF0C0=\u9ED8\u8BA4)",
-  fieldUA: "User-Agent(\u7559\u7A7A\u7528\u5168\u5C40)",
-  fieldAllowPrivate: "\u5141\u8BB8\u79C1\u7F51\u5730\u5740",
-  fieldAllowPrivateHint: "\u672C\u6E90\u6307\u5411 127.0.0.1/\u5185\u7F51(\u81EA\u5EFA RSSHub \u7B49)\u65F6\u6253\u5F00\uFF1B\u53EA\u5BF9\u8FD9\u4E2A\u6E90\u751F\u6548\u3002",
+  fieldInterval: "\u68C0\u67E5\u95F4\u9694",
+  fieldIntervalPlaceholder: "\u9ED8\u8BA4\u8BFB\u53D6\u5168\u5C40\u914D\u7F6E",
+  intervalMin: "\u68C0\u67E5\u95F4\u9694\u81F3\u5C11\u4E3A 1 \u5206\u949F\u3002",
+  fieldUA: "User-Agent",
   fieldFullText: "\u5141\u8BB8\u6293\u53D6\u539F\u6587",
   fieldFullTextHint: "\u5173\u95ED\u540E rss_read(full) \u53EA\u7ED9\u5E93\u5185\u6458\u8981\u3002",
-  fieldInclude: "\u53EA\u63A8\u5173\u952E\u8BCD(\u9017\u53F7\u5206\u9694\uFF0C\u7559\u7A7A\u4E0D\u8FC7\u6EE4)",
-  fieldExclude: "\u4E0D\u63A8\u5173\u952E\u8BCD(\u9017\u53F7\u5206\u9694)",
   dialogTest: "\u6D4B\u8BD5\u89E3\u6790",
   dialogSave: "\u8BA2\u9605",
   dialogUpdate: "\u4FDD\u5B58\u4FEE\u6539",
@@ -112,7 +104,7 @@ var zh = {
   deleteSelected: "\u5220\u9664\u5DF2\u9009",
   deleteSelectedConfirm: (n) => `\u5220\u9664\u5DF2\u52FE\u9009\u7684 ${n} \u6761\u6761\u76EE\uFF1F\uFF1F\u661F\u6807\u6761\u76EE\u4E5F\u4F1A\u4E00\u5E76\u5220\u9664\u3002`,
   clearedItems: (n) => `\u5DF2\u6E05\u7A7A ${n} \u6761\u3002`,
-  sectionFetchTitle: "\u6293\u53D6\u4E0E\u8FC7\u6EE4",
+  sectionFetchTitle: "\u6293\u53D6\u8BBE\u7F6E",
   sectionSettingsTitle: "\u8BA2\u9605\u8BBE\u7F6E",
   addSheetTitle: "\u6DFB\u52A0\u8BA2\u9605",
   addSheetDesc: "\u7C98\u8D34\u7AD9\u70B9\u6216 RSS \u5730\u5740\uFF1B\u5148\u300C\u6D4B\u8BD5\u89E3\u6790\u300D\u786E\u8BA4\u8BC6\u522B\u7ED3\u679C\uFF0C\u518D\u300C\u8BA2\u9605\u300D\u3002\u4E2A\u522B\u7AD9\u70B9\u8981\u6C42\u6D4F\u89C8\u5668 UA \u65F6\uFF0C\u5728\u300C\u914D\u7F6E \u2192 \u8F6E\u8BE2\u4E0E\u7F51\u7EDC\u300D\u91CC\u4FEE\u6539\u3002",
@@ -122,8 +114,8 @@ var zh = {
   inboxSheetDesc: "Coo \u64AD\u62A5\u8FC7\u4F46\u672A\u8BFB\u7684\u6761\u76EE\u90FD\u5728\u8FD9\u91CC\uFF1B\u52FE\u9009\u540E\u6279\u91CF\u6807\u8BB0\u3002",
   opmlSheetTitle: "OPML \u4E92\u901A",
   opmlSheetDesc: "\u5BFC\u51FA\u5F53\u524D\u8BA2\u9605\uFF0C\u6216\u4ECE\u5176\u5B83\u9605\u8BFB\u5668\u5BFC\u5165\u3002",
-  feedUrlLabel: "\u6E90\u5730\u5740(\u7AD9\u70B9\u6216 RSS \u94FE\u63A5)",
-  feedUrlPlaceholder: "https://example.com \u6216 https://example.com/feed.xml",
+  feedUrlLabel: "RSS \u8BA2\u9605\u5730\u5740",
+  feedUrlPlaceholder: "https://example.com/feed.rss",
   addTest: "\u6D4B\u8BD5\u89E3\u6790",
   addSave: "\u8BA2\u9605",
   feedsTitle: "\u8BA2\u9605\u6E90",
@@ -191,7 +183,7 @@ var en = {
   promptDocTitle: "Environment prompt",
   promptDocDescription: "How Coo relays RSS content (phrasing, subscription handling, injection defense); view and edit here.",
   groupPollingTitle: "Polling & network",
-  groupPollingDescription: "How often and how feeds are checked; per-feed intervals and keywords live in the Feeds panel.",
+  groupPollingDescription: "How often and how feeds are checked; per-feed intervals live in the Feeds panel.",
   groupNotifyTitle: "Notifications",
   groupNotifyDescription: "How new items are batched and when they may interrupt you.",
   groupDataTitle: "Reading & data",
@@ -204,8 +196,6 @@ var en = {
   requestTimeoutDescription: "Timeout for a single fetch.",
   maxFeedsTitle: "Subscription limit",
   maxFeedsDescription: "Maximum number of feeds.",
-  notifyDefaultTitle: "Default notify policy",
-  notifyDefaultDescription: "notify pushes live; digest only appears in the daily digest; mute only fills the inbox.",
   eventBatchTitle: "Batch window",
   eventBatchDescription: "New items within this window are merged into one notification.",
   eventMaxHeadlinesTitle: "Headlines per notification",
@@ -214,14 +204,10 @@ var en = {
   eventMaxCharsDescription: "Maximum length of a notification body.",
   watchKeywordsTitle: "Watch keywords",
   watchKeywordsDescription: "Comma separated; matching items are listed first in notifications.",
-  quietHoursTitle: "Quiet hours",
-  quietHoursDescription: "Format 23:00-08:00, may cross midnight; notifications pause and arrive when it ends. Empty to disable.",
   digestEnabledTitle: "Daily digest",
   digestEnabledDescription: "Summarize the last 24 hours at a fixed time every day.",
   digestTimeTitle: "Digest time",
   digestTimeDescription: "24-hour clock, e.g. 09:00.",
-  baselineNotifyTitle: "Baseline notify on subscribe",
-  baselineNotifyDescription: "Push the newest N items right after subscribing; 0 keeps history silent.",
   autoMarkTitle: "Mark read on notify",
   autoMarkTitle2: "",
   autoMarkDescription: "Mark items read when their notification is delivered. Off by default: notified is not read.",
@@ -234,8 +220,6 @@ var en = {
   baselineAsReadDescription: "When off, historical items of a new subscription count as unread.",
   inboxDesc: (r, total, per) => `Retain ${r} days \xB7 library cap ${total} \xB7 per-feed cap ${per}; starred items exempt.`,
   retentionDescription: "Older items are cleaned up except starred ones; restart the World after changing.",
-  userAgentTitle: "Default User-Agent",
-  userAgentDescription: "Fallback UA used when polling; each feed can override it in its details.",
   lampPoll: "Polling",
   lampPollOnline: "OK",
   lampPollOffline: "No feeds",
@@ -249,12 +233,13 @@ var en = {
   tabOpml: "OPML",
   tabNotify: "Notifications",
   tabNotifyDesc: "How new items are batched and when they may interrupt you; changes apply immediately.",
-  tabSettings: "Settings",
+  tabSettings: "Advanced",
   tabSettingsDesc: "Polling cadence, network behaviour and local retention.",
   saveConfig: "Save settings",
   savedConfig: "Settings saved.",
   restartHint: "The retention-days change takes effect after restarting the World.",
-  sheetDisturbTitle: "When to notify",
+  sheetDisturbTitle: "Digest & read state",
+  sheetDisturbDesc: "When the daily digest runs, and whether delivered items are marked read.",
   sheetBatchTitle: "Batching & keywords",
   statsTitle: "Overview",
   statFeeds: "Feeds",
@@ -270,15 +255,14 @@ var en = {
   detailNextPoll: "Next check",
   detailPaused: "Paused",
   fieldTitle: "Name",
+  fieldTitlePlaceholder: "Detected automatically by default",
   fieldNotify: "Notify policy",
-  fieldInterval: "Check interval (minutes, 0=default)",
-  fieldUA: "User-Agent (empty = global)",
-  fieldAllowPrivate: "Allow private addresses",
-  fieldAllowPrivateHint: "Enable when this feed points to 127.0.0.1 or an intranet host (self-hosted RSSHub); applies to this feed only.",
+  fieldInterval: "Check interval",
+  fieldIntervalPlaceholder: "Uses the global default",
+  intervalMin: "Check interval must be at least 1 minute.",
+  fieldUA: "User-Agent",
   fieldFullText: "Allow fetching articles",
   fieldFullTextHint: "When off, rss_read(full) only returns the stored summary.",
-  fieldInclude: "Only push keywords (comma separated, empty = all)",
-  fieldExclude: "Never push keywords (comma separated)",
   dialogTest: "Test parse",
   dialogSave: "Subscribe",
   dialogUpdate: "Save changes",
@@ -297,7 +281,7 @@ var en = {
   deleteSelected: "Delete selected",
   deleteSelectedConfirm: (n) => `Delete the ${n} selected item(s)? Starred ones are deleted too.`,
   clearedItems: (n) => `Cleared ${n} item(s).`,
-  sectionFetchTitle: "Fetch & filtering",
+  sectionFetchTitle: "Fetching",
   sectionSettingsTitle: "Subscription settings",
   addSheetTitle: "Add subscription",
   addSheetDesc: 'Paste a site or RSS URL; "Test parse" first, then "Subscribe". Sites requiring a browser UA: change it under Config \u2192 Polling & network.',
@@ -307,8 +291,8 @@ var en = {
   inboxSheetDesc: "Everything Coo announced but you have not read; select and mark in bulk.",
   opmlSheetTitle: "OPML",
   opmlSheetDesc: "Export current subscriptions or import from another reader.",
-  feedUrlLabel: "Feed URL (site or RSS link)",
-  feedUrlPlaceholder: "https://example.com or https://example.com/feed.xml",
+  feedUrlLabel: "RSS feed URL",
+  feedUrlPlaceholder: "https://example.com/feed.rss",
   addTest: "Test parse",
   addSave: "Subscribe",
   feedsTitle: "Feeds",
@@ -394,6 +378,10 @@ function hintMark(ctx, text2) {
 }
 function errorText(error) {
   return error instanceof Error ? error.message : String(error);
+}
+function timeValue(raw) {
+  const match = /^\s*(\d{1,2}):(\d{2})\s*$/.exec(typeof raw === "string" ? raw : "");
+  return match ? `${match[1].padStart(2, "0")}:${match[2]}` : "";
 }
 function timeShort(iso) {
   const date = new Date(iso);
@@ -723,6 +711,7 @@ function mountFeeds(ctx) {
   feedsSheet.body.appendChild(feedsPager);
   ctx.root.appendChild(feedsSheet.el);
   ctx.root.appendChild(message);
+  let defaultUserAgent = "";
   function formRow(cells) {
     const row = ctx.ui.rowbar();
     for (const cell of cells) {
@@ -732,6 +721,14 @@ function mountFeeds(ctx) {
     }
     return row;
   }
+  function dialogActions(...controls) {
+    const bar = ctx.ui.rowbar();
+    bar.style.borderTop = "1px solid var(--line)";
+    bar.style.paddingTop = "14px";
+    bar.style.marginTop = "6px";
+    bar.append(...controls);
+    return bar;
+  }
   function checkGroup(check, hint) {
     const cell = ctx.ui.h("div", null);
     check.el.appendChild(hintMark(ctx, hint));
@@ -740,28 +737,24 @@ function mountFeeds(ctx) {
     return cell;
   }
   function buildFormFields(body, feed) {
-    const title = ctx.ui.input({ placeholder: t.fieldTitle });
+    const title = ctx.ui.input({ placeholder: t.fieldTitlePlaceholder });
     title.value = feed?.title ?? "";
     const notify = ctx.ui.select();
     for (const [value, label] of [["notify", t.notifyBadge.notify], ["digest", t.notifyBadge.digest], ["mute", t.notifyBadge.mute]]) {
       notify.appendChild(new Option(label, value));
     }
     notify.value = feed?.notify ?? "notify";
-    const interval = ctx.ui.input({ type: "number" });
-    interval.value = feed ? String(feed.intervalMinutes) : "";
-    const userAgent = ctx.ui.input({ placeholder: t.fieldUA, cls: "mono" });
+    const interval = ctx.ui.input({ type: "number", placeholder: t.fieldIntervalPlaceholder });
+    interval.min = "1";
+    interval.value = feed && feed.intervalMinutes > 0 ? String(feed.intervalMinutes) : "";
+    const userAgent = ctx.ui.input({ placeholder: defaultUserAgent || "Coopanion RSS Reader", cls: "mono" });
     userAgent.value = feed?.userAgent ?? "";
-    const allowPrivate = ctx.ui.checkbox(t.fieldAllowPrivate);
-    allowPrivate.setChecked(feed?.allowPrivate === true);
     const fullText = ctx.ui.checkbox(t.fieldFullText);
     fullText.setChecked(feed ? feed.fullText !== false : true);
-    const include = ctx.ui.input({ placeholder: t.fieldInclude });
-    include.value = (feed?.include ?? []).join(", ");
-    const exclude = ctx.ui.input({ placeholder: t.fieldExclude });
-    exclude.value = (feed?.exclude ?? []).join(", ");
     body.appendChild(formRow([
-      { el: ctx.ui.field(t.fieldTitle, title), grow: true },
-      { el: ctx.ui.field(t.fieldNotify, notify), width: "190px" }
+      { el: ctx.ui.field(t.fieldTitle, title), width: "260px" },
+      { el: ctx.ui.field(t.fieldNotify, notify), width: "190px" },
+      { el: ctx.ui.h("div", "grow") }
     ]));
     body.appendChild(formRow([
       { el: ctx.ui.field(t.fieldInterval, interval), width: "190px" },
@@ -769,26 +762,23 @@ function mountFeeds(ctx) {
     ]));
     body.appendChild(ctx.ui.h("div", "sectionhead", t.sectionFetchTitle));
     body.appendChild(formRow([
-      { el: checkGroup(allowPrivate, t.fieldAllowPrivateHint), grow: true },
-      { el: checkGroup(fullText, t.fieldFullTextHint), grow: true }
+      { el: checkGroup(fullText, t.fieldFullTextHint), grow: true },
+      { el: ctx.ui.h("div", "grow") }
     ]));
-    body.appendChild(formRow([
-      { el: ctx.ui.field(t.fieldInclude, include), grow: true },
-      { el: ctx.ui.field(t.fieldExclude, exclude), grow: true }
-    ]));
-    return { title, notify, interval, userAgent, allowPrivate: allowPrivate.input, fullText: fullText.input, include, exclude };
+    return { title, notify, interval, userAgent, fullText: fullText.input };
+  }
+  function intervalValid(form) {
+    const raw = form.interval.value.trim();
+    return raw === "" || Number.isFinite(Number(raw)) && Number(raw) >= 1;
   }
   function readForm(form, url) {
     return {
       url,
       title: form.title.value.trim() || void 0,
       notify: form.notify.value,
-      intervalMinutes: form.interval.value ? Number(form.interval.value) : 0,
+      intervalMinutes: form.interval.value.trim() ? Number(form.interval.value.trim()) : 0,
       userAgent: form.userAgent.value.trim(),
-      allowPrivate: form.allowPrivate.checked,
-      fullText: form.fullText.checked,
-      include: form.include.value.split(/[,，]/).map((k) => k.trim()).filter(Boolean),
-      exclude: form.exclude.value.split(/[,，]/).map((k) => k.trim()).filter(Boolean)
+      fullText: form.fullText.checked
     };
   }
   function openAddDialog() {
@@ -804,10 +794,7 @@ function mountFeeds(ctx) {
           dlgShow(t.needUrl, true);
           return;
         }
-        const result = await ctx.invoke("feeds.test", [{
-          url,
-          allowPrivate: form.allowPrivate.checked
-        }]);
+        const result = await ctx.invoke("feeds.test", [{ url }]);
         if (!form.title.value.trim() && result.title) form.title.value = result.title;
         const lines = [
           `${t.testOkTitle} \u300C${result.title || result.feedUrl}\u300D${result.discovered ? "(\u81EA\u52A8\u53D1\u73B0)" : ""} \xB7 ${t.testItems(result.total)}`,
@@ -825,6 +812,10 @@ function mountFeeds(ctx) {
           dlgShow(t.needUrl, true);
           return;
         }
+        if (!intervalValid(form)) {
+          dlgShow(t.intervalMin, true);
+          return;
+        }
         const result = await ctx.invoke("feeds.add", [
           readForm(form, url)
         ]);
@@ -833,9 +824,7 @@ function mountFeeds(ctx) {
         await refresh();
       })
     });
-    const bar = ctx.ui.rowbar();
-    bar.append(testBtn, saveBtn);
-    body.appendChild(bar);
+    body.appendChild(dialogActions(saveBtn, testBtn));
     testLine.style.whiteSpace = "pre-line";
     body.appendChild(testLine);
     const { closeDrawer, dlgShow, dialogLocked } = openDrawer(t.addDialogTitle, body, [testBtn, saveBtn]);
@@ -858,6 +847,10 @@ function mountFeeds(ctx) {
     const saveBtn = ctx.ui.button(t.dialogUpdate, {
       variant: "primary",
       onClick: () => void dialogLocked(async () => {
+        if (!intervalValid(form)) {
+          dlgShow(t.intervalMin, true);
+          return;
+        }
         const values = readForm(form, feed.url);
         delete values.url;
         await ctx.invoke("feeds.update", [{ id: feed.id, patch: values }]);
@@ -874,9 +867,7 @@ function mountFeeds(ctx) {
         await refresh();
       })
     });
-    const bar = ctx.ui.rowbar();
-    bar.append(saveBtn, fetchBtn);
-    body.appendChild(bar);
+    body.appendChild(dialogActions(saveBtn, fetchBtn));
     const { closeDrawer, dlgShow, dialogLocked } = openDrawer(t.detailDialogTitle, body, [saveBtn, fetchBtn]);
     void closeDrawer;
   }
@@ -983,6 +974,7 @@ function mountFeeds(ctx) {
       cardUnread.value.textContent = String(overview.unread);
       cardUnread.value.parentElement?.classList.toggle("accent", overview.unread > 0);
       cardFresh.value.textContent = String(overview.fetched24h);
+      defaultUserAgent = overview.defaultUserAgent;
       renderFeeds(await ctx.invoke("feeds.list"));
     } catch (error) {
       show(`${t.loadError}: ${errorText(error)}`, true);
@@ -1086,24 +1078,38 @@ function mountConfigForm(ctx, sheets, onSaved) {
     message.textContent = body;
     message.classList.toggle("bad", bad);
   };
-  const inputs = /* @__PURE__ */ new Map();
+  const readers = /* @__PURE__ */ new Map();
   for (const sheetSpec of sheets) {
     const sheet = ctx.ui.sheet({ title: sheetSpec.title, desc: sheetSpec.desc });
     for (const field of sheetSpec.fields) {
       if (field.kind === "bool") {
         const check = ctx.ui.checkbox(field.label);
-        inputs.set(field.key, check.input);
+        readers.set(field.key, {
+          read: () => check.checked,
+          write: (raw) => check.setChecked(raw === true)
+        });
         if (field.hint) check.el.appendChild(hintMark(ctx, field.hint));
         check.el.style.marginTop = "14px";
         sheet.body.appendChild(check.el);
       } else if (field.kind === "enum") {
         const select = ctx.ui.select();
         for (const option of field.options ?? []) select.appendChild(new Option(option.label, option.value));
-        inputs.set(field.key, select);
+        readers.set(field.key, {
+          read: () => select.value,
+          write: (raw) => {
+            select.value = raw == null ? "" : String(raw);
+          }
+        });
         sheet.body.appendChild(ctx.ui.field(field.label, select));
       } else {
         const input = ctx.ui.input({ type: field.kind === "number" ? "number" : "text", placeholder: field.placeholder });
-        inputs.set(field.key, input);
+        if (field.kind === "time") input.type = "time";
+        readers.set(field.key, {
+          read: () => input.value,
+          write: (raw) => {
+            input.value = field.kind === "time" ? timeValue(raw) : raw == null ? "" : String(raw);
+          }
+        });
         sheet.body.appendChild(ctx.ui.field(field.label, input));
       }
     }
@@ -1113,10 +1119,7 @@ function mountConfigForm(ctx, sheets, onSaved) {
     variant: "primary",
     onClick: () => void locked(async () => {
       const patch = {};
-      for (const [key, control] of inputs) {
-        if (control instanceof HTMLInputElement && control.type === "checkbox") patch[key] = control.checked;
-        else patch[key] = control.value;
-      }
+      for (const [key, reader] of readers) patch[key] = reader.read();
       const result = await ctx.invoke("config.save", [patch]);
       show(result.restartRequired ? `${t.savedConfig} ${t.restartHint}` : t.savedConfig, result.restartRequired);
       onSaved(result.restartRequired);
@@ -1139,11 +1142,7 @@ function mountConfigForm(ctx, sheets, onSaved) {
   void (async () => {
     try {
       const values = await ctx.invoke("config.get");
-      for (const [key, control] of inputs) {
-        const value = values[key];
-        if (control instanceof HTMLInputElement && control.type === "checkbox") control.checked = value === true;
-        else control.value = value == null ? "" : String(value);
-      }
+      for (const [key, reader] of readers) reader.write(values[key]);
     } catch (error) {
       show(`${t.loadError}: ${errorText(error)}`, true);
     }
@@ -1154,17 +1153,10 @@ function mountNotify(ctx) {
   mountConfigForm(ctx, [
     {
       title: t.sheetDisturbTitle,
-      desc: t.tabNotifyDesc,
+      desc: t.sheetDisturbDesc,
       fields: [
-        { key: "notifyDefault", label: t.notifyDefaultTitle, kind: "enum", options: [
-          { value: "notify", label: t.notifyBadge.notify },
-          { value: "digest", label: t.notifyBadge.digest },
-          { value: "mute", label: t.notifyBadge.mute }
-        ] },
-        { key: "quietHours", label: t.quietHoursTitle, kind: "string", placeholder: "23:00-08:00" },
         { key: "digestEnabled", label: t.digestEnabledTitle, kind: "bool" },
-        { key: "digestTime", label: t.digestTimeTitle, kind: "string", placeholder: "09:00" },
-        { key: "baselineNotifyCount", label: t.baselineNotifyTitle, kind: "number" },
+        { key: "digestTime", label: t.digestTimeTitle, kind: "time" },
         { key: "autoMarkReadOnNotify", label: t.autoMarkTitle, kind: "bool" }
       ]
     },
@@ -1190,8 +1182,7 @@ function mountSettings(ctx) {
         { key: "pollIntervalMinutes", label: t.pollIntervalTitle, kind: "number" },
         { key: "pollConcurrency", label: t.pollConcurrencyTitle, kind: "number" },
         { key: "requestTimeoutMs", label: t.requestTimeoutTitle, kind: "number" },
-        { key: "maxFeeds", label: t.maxFeedsTitle, kind: "number" },
-        { key: "userAgent", label: t.userAgentTitle, kind: "string" }
+        { key: "maxFeeds", label: t.maxFeedsTitle, kind: "number" }
       ]
     },
     {

@@ -59,7 +59,7 @@ describe('RssPoller 合批与过滤', () => {
     expect(env.batches[1]?.text).toContain('RSS 1 条新内容');
   });
 
-  it('mute/digest 源不进事件;include/exclude 关键词过滤', async () => {
+  it('mute/digest 源不进事件;notify 源全部推送', async () => {
     const mute = makeEnv();
     const m = mute.store.createFeed({ url: 'https://m.org/feed', title: 'M', notify: 'mute' });
     mute.fetchHolder.impl = async () => feedResponse(RSS([['m1', '静默条目']]));
@@ -72,16 +72,16 @@ describe('RssPoller 合批与过滤', () => {
     await digestMode.poller.refresh([d.id]);
     expect(digestMode.poller.pendingBatchSize()).toBe(0);
 
-    const filtered = makeEnv();
-    const f = filtered.store.createFeed({
-      url: 'https://f.org/feed', title: 'F',
-      include: ['AI'], exclude: ['广告'],
-    });
-    filtered.fetchHolder.impl = async () => feedResponse(RSS([['k1', 'AI 新进展'], ['k2', '普通内容'], ['k3', 'AI 广告合辑']]));
-    await filtered.poller.refresh([f.id]);
-    expect(filtered.poller.pendingBatchSize()).toBe(0); // refresh 结束立即合批
-    expect(filtered.batches[0]?.text).toContain('AI 新进展');
-    expect(filtered.batches[0]?.text).not.toContain('广告');
+    // 普通 notify 源:不再有每源关键词过滤,全部进合批。
+    const plain = makeEnv();
+    const f = plain.store.createFeed({ url: 'https://f.org/feed', title: 'F' });
+    plain.fetchHolder.impl = async () => feedResponse(RSS([['k1', '第一条'], ['k2', '第二条'], ['k3', '第三条']]));
+    await plain.poller.refresh([f.id]);
+    expect(plain.poller.pendingBatchSize()).toBe(0); // refresh 结束立即合批
+    const text = plain.batches[0]?.text ?? '';
+    expect(text).toContain('第一条');
+    expect(text).toContain('第二条');
+    expect(text).toContain('第三条');
   });
 
   it('watchKeywords 命中的条目排前面', async () => {

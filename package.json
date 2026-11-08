@@ -1,6 +1,6 @@
 {
   "name": "cortico-world-rss",
-  "version": "0.1.31",
+  "version": "0.1.37",
   "type": "module",
   "description": "RSS World for Cortico: subscribe to multiple feeds, get condensed notifications from Coo, manage subscriptions from chat or WebUI",
   "keywords": [
@@ -27,11 +27,11 @@
     "locales": {
       "zh": {
         "displayName": "RSS 订阅",
-        "description": "订阅多个 RSS 源,Coo 把新内容精简后告诉你;支持免打扰、每日晨报、关键词过滤、全文阅读与 OPML 互通。"
+        "description": "订阅多个 RSS 源,Coo 把新内容精简后告诉你;支持每日晨报、全文阅读与 OPML 互通。"
       },
       "en": {
         "displayName": "RSS Reader",
-        "description": "Subscribe to RSS feeds; Coo condenses new items and tells you. Quiet hours, daily digest, keyword filters, full-text reading and OPML included."
+        "description": "Subscribe to RSS feeds; Coo condenses new items and tells you. Daily digest, full-text reading and OPML included."
       }
     }
   },

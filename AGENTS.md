@@ -22,16 +22,15 @@ RSS_LIVE_TEST=1 npx vitest run tests/live.test.ts  # 真机集成(自起测试�
 | `src/config-save.ts` | 面板保存通道的纯校验:键白名单、数值钳制、格式校验、整单拒绝 |
 | `src/store.ts` | 订阅源表 + 条目库(dataDir 双 JSON、原子写、compact 清理、基线语义) |
 | `src/parse.ts` | RSS 2.0/Atom/RDF 归一化、去重键、实体解码、站点 feed 发现 |
-| `src/fetcher.ts` | 条件请求、重定向逐跳校验、体积/超时上限、编码探测、私网拒绝 |
+| `src/fetcher.ts` | 条件请求、重定向逐跳校验、体积/超时上限、编码探测 |
 | `src/poller.ts` | 调度、退避、合批缓冲、adoptFeed(订阅首拉 + baseline) |
 | `src/extract.ts` | 文章正文抽取(rss_read full) |
-| `src/chrono.ts` | 时区时间:免打扰时段、晨报时刻、相对时间 |
-| `src/net.ts` | 私网/保留段 IP 判定(SSRF 防线) |
+| `src/chrono.ts` | 时区时间:晨报时刻、相对时间 |
 | `src/opml.ts` | OPML 导入导出 |
 | `src/world.ts` | 主体:7 工具、3 事件、面板数据面(invoke 按 method 分发)、事件投递 |
 | `src/definition.ts` | WorldDefinition(persist 通道在这里接 `ctx.persist`) |
 | `src/strings.ts` | zh/en 全部文案,**两份结构必须对称**(`typeof zh` 约束) |
-| `src/webui/client.ts` | 浏览器面板:五个标签 = 订阅源/收件箱/通知/设置/OPML |
+| `src/webui/client.ts` | 浏览器面板:五个标签 = 订阅源/收件箱/通知/高级/OPML |
 | `src/ENV_PROMPT.md` | 环境提示词(进 system 前缀) |
 | `scripts/describe.ts` | 生成 describe.json;`scripts/feed-server.mjs` 本地测试服务器 |
 | `describe.json` | 自描述产物,测试逐字比对,**改声明后必须重新生成** |
@@ -68,7 +67,7 @@ RSS_LIVE_TEST=1 npx vitest run tests/live.test.ts  # 真机集成(自起测试�
 
 - **ESM**:禁止 `require`;import 带 `.ts` 扩展名。
 - **describe.json** 由代码生成,手工改无效;改了工具/事件/ENV_PROMPT 必须重跑 `describe:local`。
-- **测试不碰真实网络**:fetch/resolve 全部注入(`makeWorld`/`makeEnv`);真机用例走本地测试服务器且默认 skip。
+- **测试不碰真实网络**:fetch 全部注入(`makeWorld`/`makeEnv`);真机用例走本地测试服务器且默认 skip。
 - **bash 里 `node -e` 写含反引号的模板字符串会坏文件**(bash 先展开)——改 TypeScript 一律用结构化编辑,不用内联脚本。内联 `replace` 不匹配时**静默不报错**:0.1.18 曾因此发了一个未改动的包(版本照升、代码没变,排查三轮才发现)。改完必须 grep 验证标记字符串确实落盘,再构建。
 - **含中文的 .ps1 必须 UTF-8 带 BOM**(PowerShell 5.1 按 GBK 解析无 BOM 文件)。
 - **Git Bash 调 Windows 工具用双斜杠**(`taskkill //IM`),且别把这类路径放在行尾(尾反斜杠转义引号)。
@@ -78,7 +77,7 @@ RSS_LIVE_TEST=1 npx vitest run tests/live.test.ts  # 真机集成(自起测试�
 
 ## 边界与红线
 
-- 测试永不访问真实网络;外部行为只通过注入的 `fetchImpl`/`resolve` 模拟。
-- 不引入遥测;网络面仅限用户配置的源地址 + `rss_read(full)` 的文章页;私网地址逐源放行。
+- 测试永不访问真实网络;外部行为只通过注入的 `fetchImpl` 模拟。
+- 不引入遥测;网络面仅限用户配置的源地址 + `rss_read(full)` 的文章页;私网/本机地址默认允许(无开关)。
 - 令牌/密钥:本扩展无;若未来需要,走 `ctx.secret()`,不进 config.json、不进日志。
 - 发布由用户决定;发布前需在 Cortico 检出根跑 `describe:extension` + `check:extension`。

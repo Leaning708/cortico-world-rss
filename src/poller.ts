@@ -8,6 +8,7 @@ import { nextOccurrenceOfDayTime, parseHm } from './chrono.ts';
 import { fetchText, FetchFailure } from './fetcher.ts';
 import { parseFeed } from './parse.ts';
 import type { FeedRecord, ItemRecord, RssStore } from './store.ts';
+import { DEFAULT_USER_AGENT } from './version.ts';
 
 /** 退避阶梯(分钟);索引按连续失败次数递增,封顶后保持。 */
 export const BACKOFF_MINUTES = [5, 10, 20, 60, 180, 360] as const;
@@ -43,11 +44,10 @@ export interface PollerDeps {
   cfg: RssConfigSection;
   store: RssStore;
   timezone: string;
-  /** 整条 fetchText 替换(测试);与 fetchImpl/resolve 二选一。 */
+  /** 整条 fetchText 替换(测试);与 fetchImpl 二选一。 */
   fetchText?: typeof fetchText;
-  /** 注入底层 fetch / DNS 解析(测试);默认真实网络。 */
+  /** 注入底层 fetch(测试);默认真实网络。 */
   fetchImpl?: import('./fetcher.ts').FetchImpl;
-  resolve?: (host: string) => Promise<string[]>;
   now?: () => Date;
   setTimeoutFn?: typeof setTimeout;
   clearTimeoutFn?: typeof clearTimeout;
@@ -102,13 +102,7 @@ export class RssPoller {
 
   constructor(private readonly deps: PollerDeps) {
     this.fetchTextImpl = deps.fetchText
-      ?? (deps.fetchImpl || deps.resolve
-        ? (options) => fetchText({
-            ...options,
-            ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
-            ...(deps.resolve ? { resolve: deps.resolve } : {}),
-          })
-        : fetchText);
+      ?? (deps.fetchImpl ? (options) => fetchText({ ...options, fetchImpl: deps.fetchImpl }) : fetchText);
     this.now = deps.now ?? (() => new Date());
     this.setTimeoutFn = deps.setTimeoutFn ?? setTimeout;
     this.clearTimeoutFn = deps.clearTimeoutFn ?? clearTimeout;
@@ -215,10 +209,9 @@ export class RssPoller {
         url: feed.url,
         timeoutMs: Math.max(3_000, cfg.requestTimeoutMs),
         maxBytes: 2 * 1024 * 1024,
-        userAgent: feed.userAgent || cfg.userAgent,
+        userAgent: feed.userAgent || DEFAULT_USER_AGENT,
         etag: feed.etag,
         lastModified: feed.lastModified,
-        allowPrivate: feed.allowPrivate === true,
       });
 
       if (result.status === 304) {
@@ -297,7 +290,6 @@ export class RssPoller {
     if (kind === 'http' && status === 404) return '源可能已迁移,检查地址或退订';
     if (kind === 'http' && (status === 401 || status === 403)) return '站点可能拒绝程序访问,试试在面板里给这个源换浏览器 UA';
     if (kind === 'http' && (status === 429 || status === 503)) return '请求太频繁或站点过载,已自动退避';
-    if (kind === 'private') return '地址是内网/本机;在该订阅详情里打开「允许私网地址」'
     if (kind === 'timeout') return '站点响应太慢';
     if (kind === 'size') return '响应体超过 2MB 上限';
     if (kind === 'parse') return '响应不是有效的 RSS/Atom';
@@ -311,11 +303,9 @@ export class RssPoller {
     return new Date(this.now().getTime() + Math.max(60_000, wait)).toISOString();
   }
 
-  /** 新条目进入合批缓冲;策略过滤在这里(digest/mute/include/exclude)。 */
+  /** 新条目进入合批缓冲;策略过滤在这里(digest/mute)。 */
   private enqueueEligible(feed: FeedRecord, item: ItemRecord, watchKeywords: readonly string[], now: Date): void {
     if (feed.notify !== 'notify') return;
-    if (feed.include.length > 0 && !keywordHit(`${item.title}\n${item.plain}`, feed.include)) return;
-    if (feed.exclude.length > 0 && keywordHit(`${item.title}\n${item.plain}`, feed.exclude)) return;
     const { score, watchHit } = scoreItem(feed, item, watchKeywords, now);
     this.buffer.push({
       feedId: feed.id,

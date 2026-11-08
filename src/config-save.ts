@@ -3,8 +3,8 @@
  * 不依赖 DOM 或 fs——浏览器侧(表单预校验)与 Node 侧(World invoke)共用;
  * 单独成文件是为了让单测直接覆盖校验表。
  */
-import { parseHm, parseQuietHours } from './chrono.ts';
-import { NOTIFY_MODES, type RssConfigSection } from './config.ts';
+import { parseHm } from './chrono.ts';
+import type { RssConfigSection } from './config.ts';
 
 /** 面板可保存的字段:不含 enabled(启停由框架与部署配置决定)。 */
 export type RssConfigKey = Exclude<keyof RssConfigSection, 'enabled'>;
@@ -15,21 +15,17 @@ export const RSS_CONFIG_KEYS = [
   'pollConcurrency',
   'requestTimeoutMs',
   'maxFeeds',
-  'notifyDefault',
   'eventBatchSeconds',
   'eventMaxHeadlines',
   'eventMaxChars',
   'watchKeywords',
-  'quietHours',
   'digestEnabled',
   'digestTime',
-  'baselineNotifyCount',
   'autoMarkReadOnNotify',
   'retentionDays',
   'maxItemsTotal',
   'maxItemsPerFeed',
   'baselineAsRead',
-  'userAgent',
 ] as const satisfies readonly RssConfigKey[];
 
 /** 数值字段的合法区间(与设计 §6.6 的 schema 一致)。 */
@@ -41,13 +37,12 @@ const NUMBER_RANGES: Partial<Record<RssConfigKey, { min: number; max: number; st
   eventBatchSeconds: { min: 5, max: 120 },
   eventMaxHeadlines: { min: 1, max: 20 },
   eventMaxChars: { min: 400, max: 4_000 },
-  baselineNotifyCount: { min: 0, max: 5 },
   retentionDays: { min: 3, max: 365 },
   maxItemsTotal: { min: 100, max: 20_000 },
   maxItemsPerFeed: { min: 20, max: 5_000 },
 };
 
-const STRING_KEYS: readonly RssConfigKey[] = ['notifyDefault', 'watchKeywords', 'quietHours', 'digestTime', 'userAgent'];
+const STRING_KEYS: readonly RssConfigKey[] = ['watchKeywords', 'digestTime'];
 const BOOL_KEYS: readonly RssConfigKey[] = ['digestEnabled', 'autoMarkReadOnNotify', 'baselineAsRead'];
 
 /** 改了要重启 World 才生效的字段(retentionDays 参与存储构造)。 */
@@ -73,17 +68,8 @@ function asNumber(key: RssConfigKey, raw: unknown): number {
 function asString(key: RssConfigKey, raw: unknown): string {
   if (!STRING_KEYS.includes(key)) throw new Error(`配置项 ${key} 不是字符串`);
   const value = typeof raw === 'string' ? raw.trim() : '';
-  if (key === 'notifyDefault' && !(NOTIFY_MODES as readonly string[]).includes(value)) {
-    throw new Error(`notifyDefault 必须是 ${NOTIFY_MODES.join('/')} 之一`);
-  }
-  if (key === 'quietHours' && value && !parseQuietHours(value)) {
-    throw new Error('免打扰时段格式应为 HH:MM-HH:MM,例如 23:00-08:00');
-  }
   if (key === 'digestTime' && !parseHm(value)) {
     throw new Error('晨报时刻格式应为 HH:MM,例如 09:00');
-  }
-  if (key === 'userAgent' && value.length > 300) {
-    throw new Error('User-Agent 过长(≤300 字符)');
   }
   return value;
 }

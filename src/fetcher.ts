@@ -1,14 +1,11 @@
 /**
- * HTTP 文本抓取:条件请求、重定向逐跳校验、体积上限、编码探测、私网地址拒绝。
- * 测试通过 fetchImpl / resolve 注入,不碰真实网络。
+ * HTTP 文本抓取:条件请求、重定向逐跳校验、体积上限、编码探测。
+ * 测试通过 fetchImpl 注入,不碰真实网络。
  */
-import { lookup } from 'node:dns';
-import { isPrivateIp } from './net.ts';
-
 export type FetchImpl = typeof fetch;
 
 export type FetchFailureKind =
-  | 'scheme' | 'private' | 'network' | 'timeout' | 'http' | 'size' | 'redirect' | 'parse';
+  | 'scheme' | 'network' | 'timeout' | 'http' | 'size' | 'redirect' | 'parse';
 
 export class FetchFailure extends Error {
   readonly kind: FetchFailureKind;
@@ -41,28 +38,12 @@ export interface FetchTextOptions {
   userAgent: string;
   etag?: string | null;
   lastModified?: string | null;
-  allowPrivate: boolean;
   maxRedirects?: number;
   fetchImpl?: FetchImpl;
-  /** 主机名 → IP 列表;默认 node:dns.lookup(all)。测试注入假实现。 */
-  resolve?: (host: string) => Promise<string[]>;
 }
 
-export function defaultResolve(host: string): Promise<string[]> {
-  return new Promise((resolvePromise, reject) => {
-    lookup(host, { all: true }, (error, addresses) => {
-      if (error) reject(error);
-      else resolvePromise(addresses.map((a) => a.address));
-    });
-  });
-}
-
-/** scheme + 私网逐项校验;拒绝时抛 FetchFailure。 */
-export async function assertFetchableUrl(
-  rawUrl: string,
-  allowPrivate: boolean,
-  resolve: (host: string) => Promise<string[]>,
-): Promise<URL> {
+/** scheme 校验;拒绝时抛 FetchFailure。 */
+export function assertFetchableUrl(rawUrl: string): URL {
   let url: URL;
   try {
     url = new URL(rawUrl);
@@ -71,24 +52,6 @@ export async function assertFetchableUrl(
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new FetchFailure('scheme', `只允许 http/https,收到 ${url.protocol}`);
-  }
-  if (allowPrivate) return url;
-  const host = url.hostname.toLowerCase();
-  if (host === 'localhost' || host.endsWith('.localhost')) {
-    throw new FetchFailure('private', `拒绝私网地址:${host}(如需订阅本地源,在订阅详情里打开「允许私网地址」)`);
-  }
-  let addresses: string[];
-  try {
-    addresses = await resolve(host);
-  } catch (error) {
-    throw new FetchFailure('network', `域名解析失败:${host}(${error instanceof Error ? error.message : String(error)})`);
-  }
-  if (addresses.length === 0) {
-    throw new FetchFailure('network', `域名没有可用地址:${host}`);
-  }
-  const privateHit = addresses.find((ip) => isPrivateIp(ip));
-  if (privateHit) {
-    throw new FetchFailure('private', `拒绝私网地址:${host} → ${privateHit}(如需订阅本地源,在订阅详情里打开「允许私网地址」)`);
   }
   return url;
 }
@@ -126,12 +89,11 @@ function decodeBody(bytes: Uint8Array, contentType: string | null): string {
   }
 }
 
-/** 抓文本。304 返回空 body;4xx/5xx、超时、超限、私网都抛 FetchFailure。 */
+/** 抓文本。304 返回空 body;4xx/5xx、超时、超限都抛 FetchFailure。 */
 export async function fetchText(options: FetchTextOptions): Promise<FetchTextResult> {
   const fetchImpl = options.fetchImpl ?? fetch;
-  const resolve = options.resolve ?? defaultResolve;
   const maxRedirects = options.maxRedirects ?? 3;
-  let currentUrl = await assertFetchableUrl(options.url, options.allowPrivate, resolve);
+  let currentUrl = assertFetchableUrl(options.url);
 
   for (let hop = 0; hop <= maxRedirects; hop++) {
     const controller = new AbortController();
@@ -176,7 +138,7 @@ export async function fetchText(options: FetchTextOptions): Promise<FetchTextRes
       } catch {
         throw new FetchFailure('redirect', `重定向地址无效:${location}`);
       }
-      currentUrl = await assertFetchableUrl(next.toString(), options.allowPrivate, resolve);
+      currentUrl = assertFetchableUrl(next.toString());
       continue;
     }
 

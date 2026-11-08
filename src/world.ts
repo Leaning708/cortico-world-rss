@@ -18,7 +18,7 @@ import {
   type RssConfigSection,
 } from './config.ts';
 import { RSS_CONFIG_KEYS, sanitizeConfigPatch } from './config-save.ts';
-import { isQuietNow, nextQuietEnd, parseQuietHours, relativeTime } from './chrono.ts';
+import { relativeTime } from './chrono.ts';
 import { extractArticle } from './extract.ts';
 import { fetchText, FetchFailure, type FetchImpl } from './fetcher.ts';
 import { discoverFeedsInHtml, parseFeed, ParseError } from './parse.ts';
@@ -26,6 +26,7 @@ import { RssPoller, type BatchEvent, type FeedErrorInfo } from './poller.ts';
 import { exportOpml, parseOpml } from './opml.ts';
 import { DEFAULT_LIMITS, RssStore, type FeedRecord, type NotifyMode as StoreNotifyMode, type StoreLimits } from './store.ts';
 import { text } from './strings.ts';
+import { DEFAULT_USER_AGENT } from './version.ts';
 
 export const ENV_PROMPT_FILE = fileURLToPath(new URL('./ENV_PROMPT.md', import.meta.url));
 
@@ -96,10 +97,7 @@ export const RSS_TOOL_DECLS: ReadonlyArray<Omit<ToolDef, 'handler'>> = [
         title: { type: 'string', description: 'Custom display name; defaults to the feed own title.' },
         notify: { type: 'string', enum: [...NOTIFY_MODES], description: 'notify pushes live (default), digest only appears in the daily digest, mute only fills the inbox.' },
         intervalMinutes: { type: 'integer', minimum: 0, maximum: 1440, description: 'Poll interval override in minutes; 0 uses the global default (min 1).' },
-        include: { type: 'array', items: { type: 'string' }, description: 'Only push items matching any of these keywords.' },
-        exclude: { type: 'array', items: { type: 'string' }, description: 'Never push items matching any of these keywords.' },
-        userAgent: { type: 'string', description: 'Per-feed User-Agent override for this feed; empty uses the global one.' },
-        allowPrivate: { type: 'boolean', description: 'Allow intranet/localhost addresses for this feed (self-hosted RSSHub). Set true only when the user explicitly asks to subscribe a local source.' },
+        userAgent: { type: 'string', description: 'Per-feed User-Agent override; empty uses the built-in Coopanion RSS Reader/<version> UA.' },
         fullText: { type: 'boolean', description: 'Allow rss_read(full) to fetch article pages for this feed. Default true.' },
         baseline: { type: 'integer', minimum: 0, maximum: 5, description: 'Push the newest N existing items as if new. Default 0 (history stays silent).' },
       },
@@ -191,11 +189,7 @@ export interface RssWorldOptions {
   persist?: (patch: Partial<RssConfigSection>) => void;
   log?: { info(message: string): void; warn(message: string): void };
   fetchImpl?: FetchImpl;
-  /** DNS 解析注入(测试用);默认 node:dns。 */
-  resolve?: (host: string) => Promise<string[]>;
   now?: () => Date;
-  setTimeoutFn?: typeof setTimeout;
-  clearTimeoutFn?: typeof clearTimeout;
 }
 
 interface UrlTestResult {
@@ -226,16 +220,11 @@ export class RssWorld implements World {
   private readonly store: RssStore;
   private readonly poller: RssPoller;
   private host: WorldHost | null = null;
-  /** 免打扰期间 piggyback 出去的事件游标，时段结束统一 promote(flush)。 */
-  private heldCursors: number[] = [];
-  private promoteTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly feedErrorLastAt = new Map<string, number>();
   private readonly optionsLog: { info(message: string): void; warn(message: string): void };
   private readonly persistCfg?: (patch: Partial<RssConfigSection>) => void;
   private readonly now: () => Date;
-  private readonly setTimeoutFn: typeof setTimeout;
-  private readonly clearTimeoutFn: typeof clearTimeout;
-  private readonly injectedFetch: { fetchImpl?: FetchImpl; resolve?: (host: string) => Promise<string[]> };
+  private readonly injectedFetch: { fetchImpl?: FetchImpl };
   /** store 持有同一引用：config.save 改动即时反映到清理与入库预算。 */
   private readonly limits: StoreLimits;
 
@@ -245,12 +234,7 @@ export class RssWorld implements World {
     this.optionsLog = options.log ?? { info: () => {}, warn: () => {} };
     this.persistCfg = options.persist;
     this.now = options.now ?? (() => new Date());
-    this.setTimeoutFn = options.setTimeoutFn ?? setTimeout;
-    this.clearTimeoutFn = options.clearTimeoutFn ?? clearTimeout;
-    this.injectedFetch = {
-      ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
-      ...(options.resolve ? { resolve: options.resolve } : {}),
-    };
+    this.injectedFetch = options.fetchImpl ? { fetchImpl: options.fetchImpl } : {};
     // 共享的 limits 活对象：store 持有引用，config.save 改动即时生效(compact/addItems 现读)。
     this.limits = {
       ...DEFAULT_LIMITS,
@@ -264,10 +248,7 @@ export class RssWorld implements World {
       store: this.store,
       timezone: this.timezone,
       ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
-      ...(options.resolve ? { resolve: options.resolve } : {}),
       ...(options.now ? { now: options.now } : {}),
-      ...(options.setTimeoutFn ? { setTimeoutFn: options.setTimeoutFn } : {}),
-      ...(options.clearTimeoutFn ? { clearTimeoutFn: options.clearTimeoutFn } : {}),
       onBatch: (batch) => { void this.deliverBatch(batch); },
       onFeedError: (info) => this.deliverFeedError(info),
       onDigestDue: () => this.deliverDigest(),
@@ -277,29 +258,19 @@ export class RssWorld implements World {
 
   // ── 事件 ────────────────────────────────────────────────────────────
 
-  private quietActive(): boolean {
-    const quiet = parseQuietHours(this.cfg.quietHours);
-    return quiet != null && isQuietNow(quiet, this.timezone, this.now());
-  }
-
-  /** 合批缓冲到期：推送 rss.new_items。免打扰时段改用 piggyback,结束 promote(flush)。 */
+  /** 合批缓冲到期：推送 rss.new_items。 */
   private async deliverBatch(batch: BatchEvent): Promise<void> {
     if (!this.host) return;
-    const quiet = this.quietActive();
     try {
-      const envelope = await this.host.pushEvent({
+      await this.host.pushEvent({
         type: 'rss.new_items',
         ts: this.now().toISOString(),
         source: RSS_ID,
         origin: 'external',
         senderKey: 'rss.new_items',
         text: batch.text,
-        meta: { ...batch.meta, quiet },
-      }, { trigger: quiet ? 'piggyback' : 'debounce' });
-      if (quiet && typeof envelope.cursor === 'number') {
-        this.heldCursors.push(envelope.cursor);
-        this.schedulePromote();
-      }
+        meta: batch.meta,
+      }, { trigger: 'debounce' });
       this.store.markNotified(batch.meta.itemKeys);
       if (this.cfg.autoMarkReadOnNotify) {
         this.store.markItems({ keys: batch.meta.itemKeys, status: 'read' });
@@ -308,35 +279,6 @@ export class RssWorld implements World {
     } catch (error) {
       this.logger.warn(`推送事件失败:${error instanceof Error ? error.message : String(error)}`);
     }
-  }
-
-  private schedulePromote(): void {
-    if (this.promoteTimer) return;
-    const quiet = parseQuietHours(this.cfg.quietHours);
-    if (!quiet) return;
-    const end = nextQuietEnd(quiet, this.timezone, this.now());
-    if (!end) return;
-    const wait = Math.max(1_000, end.getTime() - this.now().getTime());
-    this.promoteTimer = this.setTimeoutFn(() => {
-      this.promoteTimer = null;
-      this.releaseHeld();
-    }, wait);
-  }
-
-  private releaseHeld(): void {
-    const cursors = this.heldCursors;
-    this.heldCursors = [];
-    const host = this.host;
-    if (!host || cursors.length === 0) return;
-    void (async () => {
-      for (const cursor of cursors) {
-        try {
-          await host.promotePending?.(cursor, 'flush');
-        } catch (error) {
-          this.logger.warn(`promotePending 失败(cursor ${cursor}):${error instanceof Error ? error.message : String(error)}`);
-        }
-      }
-    })();
   }
 
   /** 源连续失败 ≥3 次：internal 事件，同一源 6 小时节流。 */
@@ -389,7 +331,6 @@ export class RssWorld implements World {
   envPromptVars(): Record<string, string> {
     return {
       'rss.feedCount': String(this.store.feeds().length),
-      'rss.quietHours': this.cfg.quietHours.trim() || 'off',
       'rss.digestTime': this.cfg.digestEnabled ? this.cfg.digestTime : 'off',
     };
   }
@@ -414,8 +355,6 @@ export class RssWorld implements World {
 
   async stop(): Promise<void> {
     this.poller.stop();
-    if (this.promoteTimer) this.clearTimeoutFn(this.promoteTimer);
-    this.promoteTimer = null;
     this.store.flushNow();
     this.host = null;
   }
@@ -459,7 +398,6 @@ export class RssWorld implements World {
           role: 'envPrompt',
           vars: [
             { name: 'rss.feedCount', description: '当前订阅源数量。' },
-            { name: 'rss.quietHours', description: '免打扰时段配置，off 表示关闭。' },
             { name: 'rss.digestTime', description: '每日晨报时刻，off 表示关闭。' },
           ],
         },
@@ -469,17 +407,15 @@ export class RssWorld implements World {
 
   // ── 共享操作(工具与面板共用) ────────────────────────────────────────
 
-  /** 测试一个地址：feed 直接解析；站点页自动发现 <link rel="alternate">。allowPrivate 可按源放行。 */
-  async testUrl(rawUrl: string, allowPrivate?: boolean): Promise<UrlTestResult> {
+  /** 测试一个地址：feed 直接解析；站点页自动发现 <link rel="alternate">。 */
+  async testUrl(rawUrl: string): Promise<UrlTestResult> {
     const url = rawUrl.trim();
     if (!url) throw new FetchFailure('scheme', '地址为空');
-    const allow = allowPrivate === true;
     const first = await fetchText({
       url,
       timeoutMs: Math.max(3_000, this.cfg.requestTimeoutMs),
       maxBytes: 2 * 1024 * 1024,
-      userAgent: this.cfg.userAgent,
-      allowPrivate: allow,
+      userAgent: DEFAULT_USER_AGENT,
       ...(this.depsFetchOptions()),
     });
     if (first.status === 304) throw new FetchFailure('http', '源返回 304，但没有可解析的内容');
@@ -496,8 +432,7 @@ export class RssWorld implements World {
           url: candidate,
           timeoutMs: Math.max(3_000, this.cfg.requestTimeoutMs),
           maxBytes: 2 * 1024 * 1024,
-          userAgent: this.cfg.userAgent,
-          allowPrivate: allow,
+          userAgent: DEFAULT_USER_AGENT,
           ...(this.depsFetchOptions()),
         });
         const parsed = parseFeed(next.body);
@@ -509,7 +444,7 @@ export class RssWorld implements World {
     throw lastError;
   }
 
-  private depsFetchOptions(): { fetchImpl?: FetchImpl; resolve?: (host: string) => Promise<string[]> } {
+  private depsFetchOptions(): { fetchImpl?: FetchImpl } {
     return this.injectedFetch;
   }
 
@@ -519,35 +454,27 @@ export class RssWorld implements World {
     title?: string;
     notify?: string;
     intervalMinutes?: number;
-    include?: string[];
-    exclude?: string[];
     baseline?: number;
     userAgent?: string;
-    allowPrivate?: boolean;
     fullText?: boolean;
   }): Promise<{ feed: FeedRecord; itemCount: number; discovered: boolean; created: boolean }> {
     const url = input.url.trim();
     if (!url) throw new Error('地址为空');
     const notify = ((): StoreNotifyMode => {
-      if (input.notify == null || input.notify === '') {
-        return (this.cfg.notifyDefault as StoreNotifyMode) ?? 'notify';
-      }
+      if (input.notify == null || input.notify === '') return 'notify';
       if (!(NOTIFY_MODES as readonly string[]).includes(input.notify)) {
         throw new Error(`notify 必须是 ${NOTIFY_MODES.join('/')} 之一`);
       }
       return input.notify as StoreNotifyMode;
     })();
-    const test = await this.testUrl(url, input.allowPrivate);
+    const test = await this.testUrl(url);
     const existing = this.store.feedByUrl(test.feedUrl) ?? this.store.feedByUrl(url);
     if (existing) {
       this.store.updateFeed(existing.id, {
         ...(input.title ? { title: input.title } : {}),
         notify,
         ...(input.intervalMinutes != null ? { intervalMinutes: Math.max(0, Math.floor(input.intervalMinutes)) } : {}),
-        ...(input.include != null ? { include: input.include } : {}),
-        ...(input.exclude != null ? { exclude: input.exclude } : {}),
         ...(input.userAgent != null ? { userAgent: input.userAgent } : {}),
-        ...(input.allowPrivate != null ? { allowPrivate: input.allowPrivate } : {}),
         ...(input.fullText != null ? { fullText: input.fullText } : {}),
       });
       const updated = this.store.feed(existing.id)!;
@@ -563,14 +490,11 @@ export class RssWorld implements World {
       title: input.title?.trim() || test.parsed.title || test.feedUrl,
       notify,
       ...(input.intervalMinutes != null ? { intervalMinutes: Math.max(0, Math.floor(input.intervalMinutes)) } : {}),
-      ...(input.include != null ? { include: input.include } : {}),
-      ...(input.exclude != null ? { exclude: input.exclude } : {}),
       ...(input.userAgent != null ? { userAgent: input.userAgent } : {}),
-      allowPrivate: input.allowPrivate === true,
       fullText: input.fullText !== false,
     });
-    // 首次拉取：历史静默，最新 baseline 条当作新消息。
-    const baseline = Math.max(0, Math.min(5, Math.floor(input.baseline ?? this.cfg.baselineNotifyCount)));
+    // 首次拉取：历史静默，最新 baseline 条当作新消息(baseline 默认 0)。
+    const baseline = Math.max(0, Math.min(5, Math.floor(input.baseline ?? 0)));
     const adopted = await this.poller.adoptFeed(feed, baseline, this.cfg.baselineAsRead !== false);
     if (adopted.status === 'error') {
       // 首拉失败也保留订阅(站点可能临时抖动),但如实报告。
@@ -665,8 +589,7 @@ export class RssWorld implements World {
           url: item.url,
           timeoutMs: Math.max(3_000, this.cfg.requestTimeoutMs),
           maxBytes: ARTICLE_BYTES,
-          userAgent: (feed?.userAgent || this.cfg.userAgent),
-          allowPrivate: feed?.allowPrivate === true,
+          userAgent: (feed?.userAgent || DEFAULT_USER_AGENT),
           ...this.injectedFetch,
         });
         const { text: article } = extractArticle(page.body, READ_RECEIPT_CHARS - header.length - 200);
@@ -689,10 +612,7 @@ export class RssWorld implements World {
         ...(typeof args.title === 'string' ? { title: args.title } : {}),
         ...(typeof args.notify === 'string' ? { notify: args.notify } : {}),
         ...(typeof args.intervalMinutes === 'number' ? { intervalMinutes: args.intervalMinutes } : {}),
-        ...(Array.isArray(args.include) ? { include: args.include.filter((k): k is string => typeof k === 'string') } : {}),
-        ...(Array.isArray(args.exclude) ? { exclude: args.exclude.filter((k): k is string => typeof k === 'string') } : {}),
         ...(typeof args.userAgent === 'string' ? { userAgent: args.userAgent } : {}),
-        ...(typeof args.allowPrivate === 'boolean' ? { allowPrivate: args.allowPrivate } : {}),
         ...(typeof args.fullText === 'boolean' ? { fullText: args.fullText } : {}),
         ...(typeof args.baseline === 'number' ? { baseline: args.baseline } : {}),
       });
@@ -791,7 +711,7 @@ export class RssWorld implements World {
           unread: this.store.unreadCount(),
           fetched24h: this.store.countSince(24 * 3600 * 1000, this.now()),
           failing: this.store.feeds().filter((feed) => feed.consecutiveErrors >= 3).map((feed) => ({ id: feed.id, title: feed.title, error: feed.lastError })),
-          quiet: this.quietActive(),
+          defaultUserAgent: DEFAULT_USER_AGENT,
           limits: {
             retentionDays: this.limits.retentionDays,
             maxItemsTotal: this.limits.maxItemsTotal,
@@ -803,7 +723,7 @@ export class RssWorld implements World {
       case 'feeds.test': {
         const input = (first ?? {}) as Record<string, unknown>;
         const url = typeof input.url === 'string' ? input.url : '';
-        const test = await this.testUrl(url, input.allowPrivate === true);
+        const test = await this.testUrl(url);
         return {
           ok: true,
           feedUrl: test.feedUrl,
@@ -821,10 +741,7 @@ export class RssWorld implements World {
           ...(typeof input.notify === 'string' ? { notify: input.notify } : {}),
           ...(typeof input.intervalMinutes === 'number' ? { intervalMinutes: input.intervalMinutes } : {}),
           ...(typeof input.userAgent === 'string' ? { userAgent: input.userAgent } : {}),
-          ...(typeof input.allowPrivate === 'boolean' ? { allowPrivate: input.allowPrivate } : {}),
           ...(typeof input.fullText === 'boolean' ? { fullText: input.fullText } : {}),
-          ...(Array.isArray(input.include) ? { include: input.include.filter((k): k is string => typeof k === 'string') } : {}),
-          ...(Array.isArray(input.exclude) ? { exclude: input.exclude.filter((k): k is string => typeof k === 'string') } : {}),
         });
         return { ok: true, id: result.feed.id, title: result.feed.title, created: result.created, itemCount: result.itemCount };
       }
@@ -836,12 +753,9 @@ export class RssWorld implements World {
           ...(typeof patch.title === 'string' ? { title: patch.title } : {}),
           ...(typeof patch.notify === 'string' ? { notify: patch.notify as StoreNotifyMode } : {}),
           ...(typeof patch.intervalMinutes === 'number' ? { intervalMinutes: patch.intervalMinutes } : {}),
-          ...(Array.isArray(patch.include) ? { include: patch.include.filter((k): k is string => typeof k === 'string') } : {}),
-          ...(Array.isArray(patch.exclude) ? { exclude: patch.exclude.filter((k): k is string => typeof k === 'string') } : {}),
           ...(typeof patch.paused === 'boolean' ? { paused: patch.paused } : {}),
           ...(typeof patch.weight === 'number' ? { weight: patch.weight } : {}),
           ...(typeof patch.userAgent === 'string' ? { userAgent: patch.userAgent } : {}),
-          ...(typeof patch.allowPrivate === 'boolean' ? { allowPrivate: patch.allowPrivate } : {}),
           ...(typeof patch.fullText === 'boolean' ? { fullText: patch.fullText } : {}),
         });
         if (!updated) throw new Error(`unknown feed: ${id}`);
@@ -955,8 +869,8 @@ export const RSS_EVENT_DESCS = [
   {
     type: 'rss.new_items',
     description: {
-      zh: '合批后的新内容摘要：源名 + 标题 + 一句话摘要，默认最多 8 条；免打扰时段会延迟送达。',
-      en: 'Batched digest of new items: feed title, headline and one-line summary, up to 8; delayed during quiet hours.',
+      zh: '合批后的新内容摘要：源名 + 标题 + 一句话摘要，默认最多 8 条。',
+      en: 'Batched digest of new items: feed title, headline and one-line summary, up to 8.',
     },
   },
   {
