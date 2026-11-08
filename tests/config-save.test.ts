@@ -21,11 +21,11 @@ describe('sanitizeConfigPatch', () => {
   it('布尔归一:真值才为 true', () => {
     expect(sanitizeConfigPatch({ digestEnabled: true }, current).patch.digestEnabled).toBe(true);
     expect(sanitizeConfigPatch({ digestEnabled: 'yes' }, current).patch.digestEnabled).toBe(false);
+    expect(sanitizeConfigPatch({ startupNotify: false }, current).patch.startupNotify).toBe(false);
   });
 
   it('字符串校验:digestTime 格式、trim', () => {
     expect(sanitizeConfigPatch({ digestTime: '09:30' }, current).patch.digestTime).toBe('09:30');
-    expect(sanitizeConfigPatch({ watchKeywords: ' AI , 模型 ' }, current).patch.watchKeywords).toBe('AI , 模型');
     expect(() => sanitizeConfigPatch({ digestTime: '9点' }, current)).toThrow('HH:MM');
   });
 

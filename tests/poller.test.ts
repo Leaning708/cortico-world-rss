@@ -59,18 +59,12 @@ describe('RssPoller 合批与过滤', () => {
     expect(env.batches[1]?.text).toContain('RSS 1 条新内容');
   });
 
-  it('mute/digest 源不进事件;notify 源全部推送', async () => {
+  it('mute 源不进事件;notify 源全部推送', async () => {
     const mute = makeEnv();
     const m = mute.store.createFeed({ url: 'https://m.org/feed', title: 'M', notify: 'mute' });
     mute.fetchHolder.impl = async () => feedResponse(RSS([['m1', '静默条目']]));
     await mute.poller.refresh([m.id]);
     expect(mute.poller.pendingBatchSize()).toBe(0);
-
-    const digestMode = makeEnv();
-    const d = digestMode.store.createFeed({ url: 'https://d.org/feed', title: 'D', notify: 'digest' });
-    digestMode.fetchHolder.impl = async () => feedResponse(RSS([['d1', '晨报条目']]));
-    await digestMode.poller.refresh([d.id]);
-    expect(digestMode.poller.pendingBatchSize()).toBe(0);
 
     // 普通 notify 源:不再有每源关键词过滤,全部进合批。
     const plain = makeEnv();
@@ -82,17 +76,6 @@ describe('RssPoller 合批与过滤', () => {
     expect(text).toContain('第一条');
     expect(text).toContain('第二条');
     expect(text).toContain('第三条');
-  });
-
-  it('watchKeywords 命中的条目排前面', async () => {
-    const env = makeEnv({ watchKeywords: '重要', eventBatchSeconds: 5, eventMaxHeadlines: 5 });
-    const feed = env.store.createFeed({ url: 'https://a.org/feed', title: 'A' });
-    env.fetchHolder.impl = async () => feedResponse(RSS([['u1', '普通早条目'], ['u2', '重要通知'], ['u3', '普通晚条目']]));
-    await env.poller.refresh([feed.id]);
-    env.poller.flushBatch();
-    const text = env.batches[0]?.text ?? '';
-    expect(text.indexOf('重要通知')).toBeGreaterThan(-1);
-    expect(text.indexOf('重要通知')).toBeLessThan(text.indexOf('普通早条目'));
   });
 
   it('失败退避:连续失败计数与退避时刻;成功后归零', async () => {

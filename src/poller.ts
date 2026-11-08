@@ -62,28 +62,17 @@ interface BufferedEntry {
   feedTitle: string;
   item: ItemRecord;
   score: number;
-  watchHit: boolean;
   enqueuedAt: number;
 }
 
 type PollResult = { status: 'ok' | 'not-modified' | 'error'; freshCount: number };
 
-function keywordHit(text: string, keywords: readonly string[]): boolean {
-  const lower = text.toLowerCase();
-  return keywords.some((keyword) => keyword && lower.includes(keyword.toLowerCase()));
-}
-
-/** 机械打分:关注关键词命中 > 源权重 > 新鲜度。只决定事件内顺序,不判断"重要性"。 */
-function scoreItem(feed: FeedRecord, item: ItemRecord, watchKeywords: readonly string[], now: Date): { score: number; watchHit: boolean } {
+/** 机械打分:源权重 + 新鲜度。只决定事件内顺序,不判断"重要性"。 */
+function scoreItem(feed: FeedRecord, item: ItemRecord, now: Date): number {
   let score = feed.weight;
-  let watchHit = false;
-  if (keywordHit(`${item.title}\n${item.plain}`, watchKeywords)) {
-    score += 3;
-    watchHit = true;
-  }
   const ageHours = (now.getTime() - new Date(item.publishedAt).getTime()) / 3600_000;
   if (ageHours < 1) score += 2;
-  return { score, watchHit };
+  return score;
 }
 
 const CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩',
@@ -229,11 +218,10 @@ export class RssPoller {
       const { fresh } = this.deps.store.addItems(feed, parsed.items, now, opts.baseline != null
         ? { baselineMarkSeen: true, baselineNotifyCount: opts.baseline, baselineAsRead: opts.baselineAsRead }
         : undefined);
-      const watchKeywords = cfg.watchKeywords.split(',').map((keyword) => keyword.trim()).filter(Boolean);
       // baseline 模式:仅未被静默标记的条目(最新 N 条)才进缓冲。
       const toEnqueue = opts.baseline != null ? fresh.filter((item) => !item.notified) : fresh;
       for (const item of toEnqueue) {
-        this.enqueueEligible(feed, item, watchKeywords, now);
+        this.enqueueEligible(feed, item, now);
       }
       this.deps.store.setPollState(feed.id, {
         ...(result.etag || result.lastModified
@@ -303,16 +291,14 @@ export class RssPoller {
     return new Date(this.now().getTime() + Math.max(60_000, wait)).toISOString();
   }
 
-  /** 新条目进入合批缓冲;策略过滤在这里(digest/mute)。 */
-  private enqueueEligible(feed: FeedRecord, item: ItemRecord, watchKeywords: readonly string[], now: Date): void {
+  /** 新条目进入合批缓冲;策略过滤在这里(mute 源不播报)。 */
+  private enqueueEligible(feed: FeedRecord, item: ItemRecord, now: Date): void {
     if (feed.notify !== 'notify') return;
-    const { score, watchHit } = scoreItem(feed, item, watchKeywords, now);
     this.buffer.push({
       feedId: feed.id,
       feedTitle: feed.title,
       item,
-      score,
-      watchHit,
+      score: scoreItem(feed, item, now),
       enqueuedAt: now.getTime(),
     });
     if (this.buffer.length >= Math.max(1, this.deps.cfg.eventMaxHeadlines)) this.flushBatch();
@@ -332,8 +318,7 @@ export class RssPoller {
     const maxHeadlines = Math.max(1, Math.floor(cfg.eventMaxHeadlines));
     const maxChars = Math.max(400, Math.floor(cfg.eventMaxChars));
     const ordered = [...this.buffer].sort((a, b) =>
-      (Number(b.watchHit) - Number(a.watchHit))
-      || (b.score - a.score)
+      (b.score - a.score)
       || b.item.publishedAt.localeCompare(a.item.publishedAt));
     const shown: BufferedEntry[] = [];
     const lines: string[] = [];

@@ -104,10 +104,9 @@
             "type": "string",
             "enum": [
               "notify",
-              "digest",
               "mute"
             ],
-            "description": "notify pushes live (default), digest only appears in the daily digest, mute only fills the inbox."
+            "description": "notify pushes live (default); mute only fills the inbox and is never announced (digest or startup included)."
           },
           "intervalMinutes": {
             "type": "integer",
@@ -251,8 +250,8 @@
     {
       "type": "rss.daily_digest",
       "description": {
-        "zh": "每日晨报：过去 24 小时的收件统计与未读重点；当天没有内容就不发。",
-        "en": "Daily digest: last-24h counts and unread highlights; silent when nothing arrived."
+        "zh": "每日晨报：过去 24 小时全库收件统计与未读计数(含静默源)，并列最多 3 条非静默源的未读重点；当天没有内容就不发。",
+        "en": "Daily digest: last-24h counts across all feeds (muted included), plus up to 3 unread highlights from non-muted feeds."
       }
     }
   ],

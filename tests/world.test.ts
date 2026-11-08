@@ -108,21 +108,20 @@ describe('构造与配置', () => {
     expect(values.pollIntervalMinutes).toBe(30);
     expect(Object.keys(values)).toHaveLength(15);
     expect(values.userAgent).toBeUndefined();
+    expect(values.startupNotify).toBe(true);
     const overview = await ui?.invoke?.('manage', 'overview', []) as { defaultUserAgent: string };
     expect(overview.defaultUserAgent).toMatch(/^Coopanion RSS Reader\/\d+\.\d+\.\d+$/);
     // 合法保存:夹取 + 活配置生效 + persist 收到补丁。
     const saved = await ui?.invoke?.('manage', 'config.save', [{
       pollIntervalMinutes: 0, // 低于下限 → 钳到 1
       autoMarkReadOnNotify: true,
-      watchKeywords: ' AI , 模型 ',
     }]) as { ok: boolean; restartRequired: boolean; applied: string[] };
     expect(saved.ok).toBe(true);
     expect(saved.restartRequired).toBe(false);
     expect(cfg.pollIntervalMinutes).toBe(1);
     expect(cfg.autoMarkReadOnNotify).toBe(true);
-    expect(cfg.watchKeywords).toBe('AI , 模型');
     expect(persisted).toHaveLength(1);
-    expect(saved.applied).toHaveLength(3);
+    expect(saved.applied).toHaveLength(2);
     // retentionDays 改动 → restartRequired。
     const saved2 = await ui?.invoke?.('manage', 'config.save', [{ retentionDays: 7 }]) as { restartRequired: boolean };
     expect(saved2.restartRequired).toBe(true);
@@ -163,6 +162,12 @@ describe('rss_add:发现、试解析、baseline', () => {
     const receipt = receiptText(await tools.rss_add({ url: 'https://example.org/plain' }));
     expect(receipt).toMatch(/订阅失败/);
     expect(receipt).toMatch(/没有发现|解析|RSS/);
+  });
+
+  it('rss_add 拒绝已移除的 digest 策略', async () => {
+    const { tools } = makeWorld();
+    const receipt = receiptText(await tools.rss_add({ url: 'https://example.org/feed.xml', notify: 'digest' }));
+    expect(receipt).toContain('notify 必须是 notify/mute');
   });
 
   it('重复添加同一源变成更新,不新建', async () => {
@@ -258,6 +263,61 @@ describe('事件链路', () => {
     const rendered = host.renderDeferred()[0];
     expect(rendered).toContain('RSS 晨报');
     expect(rendered).toContain('晨报条目');
+    await world.stop();
+  });
+
+  it('晨报:计数包含静默源,未读重点只列非静默源', async () => {
+    const { world, tools } = makeWorld({ digestEnabled: true, startupNotify: false }, (url) => String(url).includes('mute')
+      ? response(RSS([['s1', '静默条目']], '静默源'))
+      : response(RSS([['n1', '播报条目']], '播报源')));
+    const host = await mounted(world);
+    await tools.rss_add({ url: 'https://example.org/notify.xml', baseline: 1 });
+    await tools.rss_add({ url: 'https://example.org/mute.xml', notify: 'mute', baseline: 1 });
+    (world as unknown as { deliverDigest(): void }).deliverDigest();
+    const rendered = host.renderDeferred()[0] ?? '';
+    expect(rendered).toContain('过去 24 小时收到 2 条新内容');
+    expect(rendered).toContain('当前未读 2 条');
+    expect(rendered).toContain('播报条目');
+    expect(rendered).not.toContain('静默条目');
+    await world.stop();
+  });
+
+  it('晨报:过去 24 小时只有静默源内容时仍投递统计,不给重点', async () => {
+    const { world, tools } = makeWorld({ digestEnabled: true, startupNotify: false }, () => response(RSS([['s1', '静默条目']], '静默源')));
+    const host = await mounted(world);
+    await tools.rss_add({ url: 'https://example.org/mute.xml', notify: 'mute', baseline: 1 });
+    (world as unknown as { deliverDigest(): void }).deliverDigest();
+    const rendered = host.renderDeferred()[0] ?? '';
+    expect(rendered).toContain('过去 24 小时收到 1 条新内容');
+    expect(rendered).toContain('静默源的 1 条只留在收件箱');
+    expect(rendered).not.toContain('静默条目');
+    await world.stop();
+  });
+
+  it('启动播报:开启时立即刷新并推送,静默源不参与', async () => {
+    const { world } = makeWorld({}, (url) => String(url).includes('mute')
+      ? response(RSS([['s1', '静默条目']], '静默源'))
+      : response(RSS([['n1', '启动条目']], '启动源')));
+    const store = (world as unknown as { store: import('../src/store.ts').RssStore }).store;
+    store.createFeed({ url: 'https://example.org/live.xml', title: '启动源' });
+    store.createFeed({ url: 'https://example.org/mute.xml', title: '静默源', notify: 'mute' });
+    const host = await mounted(world);
+    const batches = (): Array<{ type: string }> => host.events.filter((event) => event.type === 'rss.new_items');
+    for (let i = 0; i < 50 && batches().length === 0; i += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(batches()).toHaveLength(1);
+    const text = (host.events.find((event) => event.type === 'rss.new_items') as { text?: string } | undefined)?.text ?? '';
+    expect(text).toContain('启动条目');
+    expect(text).not.toContain('静默条目');
+    await world.stop();
+  });
+
+  it('启动播报:关闭时不立即刷新', async () => {
+    const { world } = makeWorld({ startupNotify: false }, () => response(RSS([['n1', '启动条目']], '启动源')));
+    const store = (world as unknown as { store: import('../src/store.ts').RssStore }).store;
+    store.createFeed({ url: 'https://example.org/live.xml', title: '启动源' });
+    const host = await mounted(world);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(host.events.filter((event) => event.type === 'rss.new_items')).toHaveLength(0);
     await world.stop();
   });
 

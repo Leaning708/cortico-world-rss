@@ -4,7 +4,7 @@ Coopanion(Cortico 框架)的 RSS 订阅 World 扩展:订阅多个 RSS 源,Coo �
 
 - 订阅源管理(站点 URL 自动发现 feed、试解析、每源间隔/策略)
 - 新内容合批推送(默认 20s 窗口、单条最多 8 头条)
-- 每日晨报、源故障诊断(`rss.feed_error`)、收件箱(未读/星标)、全文抓取正文抽取
+- 每日晨报、启动时播报最新消息、源故障诊断(`rss.feed_error`)、收件箱(未读/星标)、全文抓取正文抽取
 - WebUI 管理面板:订阅源 / 收件箱 / OPML 导入导出
 - 只访问你配置的源地址与按需抓取的文章页;无密钥、无遥测
 
@@ -22,15 +22,15 @@ Coopanion(Cortico 框架)的 RSS 订阅 World 扩展:订阅多个 RSS 源,Coo �
 | 关键项 | 默认 | 说明 |
 |---|---|---|
 | `pollIntervalMinutes` | 30 | 全局轮询间隔(分钟);单源可在面板覆盖,下限 1 |
-| `digestEnabled` / `digestTime` | 关 / 09:00 | 每日晨报,当天没内容就不发 |
-| `watchKeywords` | 空 | 关注关键词,命中排前 |
+| `digestEnabled` / `digestTime` | 关 / 09:00 | 每日晨报:统计含静默源,未读重点只列非静默源;当天没内容就不发 |
+| `startupNotify` | 开 | 应用启动后立即拉取全部源,并把本次新内容马上播报一次;静默源不参与 |
 | `eventBatchSeconds` / `eventMaxHeadlines` / `eventMaxChars` | 20 / 8 / 1200 | 合批窗口与体积预算 |
 | `retentionDays` / `maxItemsTotal` / `maxItemsPerFeed` | 30 / 2000 / 200 | 自动清理:保留天数、全库与每源条数上限(星标豁免);改动即时生效,收件箱顶部有实时说明 |
 | `baselineAsRead` | 开 | 订阅时把历史条目标为已读(不污染未读数);关闭后历史计入未读 |
 
 工具(全部 `rss_` 前缀):`rss_list` `rss_unread` `rss_read` `rss_add` `rss_remove` `rss_mark` `rss_refresh`。
 **手动拉取**:面板「订阅源」里的「拉取 / 拉取全部」按钮立即轮询;对话里说"刷新 RSS"走 `rss_refresh`,效果相同。
-**按源配置**:每个订阅在「详情」弹框里单独设置策略、UA、允许抓取原文;全局的间隔是新源/未设置源的默认值。
+**按源配置**:每个订阅在「详情」弹框里单独设置策略(实时/静默)、UA、允许抓取原文;全局的间隔是新源/未设置源的默认值。静默源只进收件箱,不参与实时、晨报或启动播报。
 事件:`rss.new_items`(外部,合批)、`rss.feed_error`(内部,6h 节流)、`rss.daily_digest`(内部,晨报)。
 
 ## 本地测试服务器

@@ -19,19 +19,19 @@ var zh = {
   requestTimeoutDescription: "\u5355\u6B21\u62C9\u53D6\u7684\u8D85\u65F6\u65F6\u95F4\u3002",
   maxFeedsTitle: "\u8BA2\u9605\u5BB9\u91CF",
   maxFeedsDescription: "\u6700\u591A\u53EF\u8BA2\u9605\u7684\u6E90\u6570\u91CF\u3002",
-  eventBatchTitle: "\u4E8B\u4EF6\u5408\u6279\u7A97\u53E3",
-  eventBatchDescription: "\u591A\u6761\u65B0\u5185\u5BB9\u5728\u8FD9\u6BB5\u65F6\u95F4\u5185\u5408\u5E76\u6210\u4E00\u6761\u901A\u77E5\u3002",
-  eventMaxHeadlinesTitle: "\u5355\u6761\u901A\u77E5\u5934\u6761\u6570",
-  eventMaxHeadlinesDescription: "\u4E00\u6761\u901A\u77E5\u6700\u591A\u7EC6\u8BF4\u7684\u6761\u76EE\u6570\uFF0C\u8D85\u51FA\u7684\u53EA\u8FDB\u6536\u4EF6\u7BB1\u3002",
+  eventBatchTitle: "\u64AD\u62A5\u5408\u5E76\u7A97\u53E3\uFF08\u79D2\uFF09",
+  eventBatchDescription: "\u65B0\u5185\u5BB9\u5148\u5728\u8FD9\u4E2A\u7A97\u53E3\u5185\u6512\u7740\uFF08\u5355\u4F4D\uFF1A\u79D2\uFF09\uFF1B\u7A97\u53E3\u7ED3\u675F\u6216\u6512\u6EE1\u6761\u76EE\u4E0A\u9650\u540E\uFF0C\u5408\u5E76\u6210\u4E00\u6761\u64AD\u62A5\u3002",
+  eventMaxHeadlinesTitle: "\u6BCF\u6B21\u64AD\u62A5\u6761\u76EE\u4E0A\u9650",
+  eventMaxHeadlinesDescription: "\u4E00\u6B21\u64AD\u62A5\u6700\u591A\u5C55\u5F00\u51E0\u6761\uFF1B\u8D85\u8FC7\u4E0A\u9650\uFF08\u6216\u5355\u6761\u5B57\u7B26\u4E0A\u9650\uFF09\u7684\u6761\u76EE\u4E0D\u4F1A\u4E22\u5F03\uFF0C\u4F1A\u7559\u5230\u4E0B\u4E00\u6CE2\u6B21\u901A\u77E5\u3002",
   eventMaxCharsTitle: "\u5355\u6761\u901A\u77E5\u5B57\u7B26\u4E0A\u9650",
   eventMaxCharsDescription: "\u901A\u77E5\u6B63\u6587\u7684\u957F\u5EA6\u4E0A\u9650\u3002",
-  watchKeywordsTitle: "\u5173\u6CE8\u5173\u952E\u8BCD",
-  watchKeywordsDescription: "\u9017\u53F7\u5206\u9694\uFF1B\u6807\u9898\u6216\u6458\u8981\u547D\u4E2D\u7684\u6761\u76EE\u4F1A\u6392\u5728\u901A\u77E5\u524D\u9762\u3002",
   digestEnabledTitle: "\u6BCF\u65E5\u6668\u62A5",
-  digestEnabledDescription: "\u6BCF\u5929\u56FA\u5B9A\u65F6\u523B\u628A\u8FD1 24 \u5C0F\u65F6\u7684\u65B0\u5185\u5BB9\u6C47\u603B\u6210\u4E00\u6761\u6D88\u606F\u3002",
+  digestEnabledDescription: "\u6BCF\u5929\u56FA\u5B9A\u65F6\u523B\u6C47\u603B\u4E00\u6B21\uFF1A\u8FD1 24 \u5C0F\u65F6\u5168\u5E93\u65B0\u5185\u5BB9\u4E0E\u672A\u8BFB\u6570\uFF08\u542B\u9759\u9ED8\u6E90\uFF09\uFF0C\u5E76\u5217\u6700\u591A 3 \u6761\u975E\u9759\u9ED8\u6E90\u7684\u672A\u8BFB\u91CD\u70B9\u3002",
+  startupNotifyTitle: "\u542F\u52A8\u65F6\u64AD\u62A5\u6700\u65B0\u6D88\u606F",
+  startupNotifyDescription: "\u5E94\u7528\u542F\u52A8\u540E\u7ACB\u5373\u62C9\u53D6\u5168\u90E8\u6E90\uFF0C\u5E76\u628A\u8FD9\u6B21\u7684\u65B0\u5185\u5BB9\u9A6C\u4E0A\u64AD\u62A5\u4E00\u6B21\uFF1B\u9759\u9ED8\u6E90\u4E0D\u53C2\u4E0E\u3002",
   digestTimeTitle: "\u6668\u62A5\u65F6\u523B",
   digestTimeDescription: "24 \u5C0F\u65F6\u5236\uFF0C\u4F8B\u5982 09:00\u3002",
-  autoMarkTitle: "\u63A8\u9001\u5373\u6807\u5DF2\u8BFB",
+  autoMarkTitle: "\u63A8\u9001\u65F6\u6807\u4E3A\u5DF2\u8BFB",
   autoMarkTitle2: "",
   autoMarkDescription: "\u901A\u77E5\u9001\u8FBE\u540E\u81EA\u52A8\u628A\u5BF9\u5E94\u6761\u76EE\u6807\u4E3A\u5DF2\u8BFB\u3002\u9ED8\u8BA4\u5173\uFF1A\u63A8\u9001\u4E0D\u7B49\u4E8E\u770B\u8FC7\u3002",
   retentionTitle: "\u6761\u76EE\u4FDD\u7559\u5929\u6570",
@@ -61,9 +61,9 @@ var zh = {
   saveConfig: "\u4FDD\u5B58\u914D\u7F6E",
   savedConfig: "\u914D\u7F6E\u5DF2\u4FDD\u5B58\u3002",
   restartHint: "\u300C\u6761\u76EE\u4FDD\u7559\u5929\u6570\u300D\u7684\u6539\u52A8\u9700\u8981\u91CD\u542F World \u540E\u751F\u6548\u3002",
-  sheetDisturbTitle: "\u6668\u62A5\u4E0E\u5DF2\u8BFB",
-  sheetDisturbDesc: "\u6BCF\u65E5\u6668\u62A5\u7684\u6C47\u603B\u65F6\u523B\uFF0C\u4EE5\u53CA\u63A8\u9001\u540E\u662F\u5426\u81EA\u52A8\u6807\u4E3A\u5DF2\u8BFB\u3002",
-  sheetBatchTitle: "\u5408\u6279\u4E0E\u5173\u952E\u8BCD",
+  sheetDisturbTitle: "\u901A\u77E5\u884C\u4E3A",
+  sheetDisturbDesc: "\u6BCF\u65E5\u6668\u62A5\u3001\u542F\u52A8\u64AD\u62A5\u4E0E\u63A8\u9001\u540E\u7684\u5DF2\u8BFB\u5904\u7406\u3002",
+  sheetBatchTitle: "\u6D88\u606F\u5408\u6279",
   statsTitle: "\u6982\u89C8",
   statFeeds: "\u8BA2\u9605\u6E90",
   statUnread: "\u672A\u8BFB",
@@ -104,7 +104,6 @@ var zh = {
   deleteSelected: "\u5220\u9664\u5DF2\u9009",
   deleteSelectedConfirm: (n) => `\u5220\u9664\u5DF2\u52FE\u9009\u7684 ${n} \u6761\u6761\u76EE\uFF1F\uFF1F\u661F\u6807\u6761\u76EE\u4E5F\u4F1A\u4E00\u5E76\u5220\u9664\u3002`,
   clearedItems: (n) => `\u5DF2\u6E05\u7A7A ${n} \u6761\u3002`,
-  sectionFetchTitle: "\u6293\u53D6\u8BBE\u7F6E",
   sectionSettingsTitle: "\u8BA2\u9605\u8BBE\u7F6E",
   addSheetTitle: "\u6DFB\u52A0\u8BA2\u9605",
   addSheetDesc: "\u7C98\u8D34\u7AD9\u70B9\u6216 RSS \u5730\u5740\uFF1B\u5148\u300C\u6D4B\u8BD5\u89E3\u6790\u300D\u786E\u8BA4\u8BC6\u522B\u7ED3\u679C\uFF0C\u518D\u300C\u8BA2\u9605\u300D\u3002\u4E2A\u522B\u7AD9\u70B9\u8981\u6C42\u6D4F\u89C8\u5668 UA \u65F6\uFF0C\u5728\u300C\u914D\u7F6E \u2192 \u8F6E\u8BE2\u4E0E\u7F51\u7EDC\u300D\u91CC\u4FEE\u6539\u3002",
@@ -139,7 +138,7 @@ var zh = {
   errorBadge: (s) => `\u5F02\u5E38:${s}`,
   errorShort: (n) => `\u5F02\u5E38 \xD7${n}`,
   intervalBadge: (n) => n > 0 ? `\u6BCF ${n} \u5206\u949F` : "\u9ED8\u8BA4\u95F4\u9694",
-  notifyBadge: { notify: "\u5B9E\u65F6", digest: "\u6668\u62A5", mute: "\u9759\u9ED8" },
+  notifyBadge: { notify: "\u5B9E\u65F6", mute: "\u9759\u9ED8" },
   lastOk: (t) => `\u4E0A\u6B21\u6210\u529F ${t}`,
   importLabel: "\u5BFC\u5165 OPML(\u7C98\u8D34\u6587\u4EF6\u5185\u5BB9\u6216\u9009\u62E9\u6587\u4EF6)",
   exportLabel: "\u5BFC\u51FA OPML",
@@ -196,16 +195,16 @@ var en = {
   requestTimeoutDescription: "Timeout for a single fetch.",
   maxFeedsTitle: "Subscription limit",
   maxFeedsDescription: "Maximum number of feeds.",
-  eventBatchTitle: "Batch window",
-  eventBatchDescription: "New items within this window are merged into one notification.",
-  eventMaxHeadlinesTitle: "Headlines per notification",
-  eventMaxHeadlinesDescription: "How many items one notification details; the rest go to the inbox.",
+  eventBatchTitle: "Announcement batch window (s)",
+  eventBatchDescription: "New items collect during this window (seconds); when it ends or the item limit is reached, they are merged into one announcement.",
+  eventMaxHeadlinesTitle: "Max items per announcement",
+  eventMaxHeadlinesDescription: "How many items one announcement details; items over the limit (or the character cap) are not dropped and move to the next round.",
   eventMaxCharsTitle: "Notification character limit",
   eventMaxCharsDescription: "Maximum length of a notification body.",
-  watchKeywordsTitle: "Watch keywords",
-  watchKeywordsDescription: "Comma separated; matching items are listed first in notifications.",
   digestEnabledTitle: "Daily digest",
-  digestEnabledDescription: "Summarize the last 24 hours at a fixed time every day.",
+  digestEnabledDescription: "A daily summary of the last 24 hours: counts across all feeds (muted included) and up to 3 unread highlights from non-muted feeds.",
+  startupNotifyTitle: "Announce new items on startup",
+  startupNotifyDescription: "Fetch every feed right after the app starts and announce what is new immediately; muted feeds are skipped.",
   digestTimeTitle: "Digest time",
   digestTimeDescription: "24-hour clock, e.g. 09:00.",
   autoMarkTitle: "Mark read on notify",
@@ -238,9 +237,9 @@ var en = {
   saveConfig: "Save settings",
   savedConfig: "Settings saved.",
   restartHint: "The retention-days change takes effect after restarting the World.",
-  sheetDisturbTitle: "Digest & read state",
-  sheetDisturbDesc: "When the daily digest runs, and whether delivered items are marked read.",
-  sheetBatchTitle: "Batching & keywords",
+  sheetDisturbTitle: "Notification behavior",
+  sheetDisturbDesc: "Daily digest, startup announcement and read handling after delivery.",
+  sheetBatchTitle: "Message batching",
   statsTitle: "Overview",
   statFeeds: "Feeds",
   statUnread: "Unread",
@@ -281,7 +280,6 @@ var en = {
   deleteSelected: "Delete selected",
   deleteSelectedConfirm: (n) => `Delete the ${n} selected item(s)? Starred ones are deleted too.`,
   clearedItems: (n) => `Cleared ${n} item(s).`,
-  sectionFetchTitle: "Fetching",
   sectionSettingsTitle: "Subscription settings",
   addSheetTitle: "Add subscription",
   addSheetDesc: 'Paste a site or RSS URL; "Test parse" first, then "Subscribe". Sites requiring a browser UA: change it under Config \u2192 Polling & network.',
@@ -316,7 +314,7 @@ var en = {
   errorBadge: (s) => `Error: ${s}`,
   errorShort: (n) => `Error \xD7${n}`,
   intervalBadge: (n) => n > 0 ? `every ${n} min` : "default interval",
-  notifyBadge: { notify: "live", digest: "digest", mute: "mute" },
+  notifyBadge: { notify: "live", mute: "mute" },
   lastOk: (t) => `last ok ${t}`,
   importLabel: "Import OPML (paste content or pick a file)",
   exportLabel: "Export OPML",
@@ -373,7 +371,14 @@ function hintMark(ctx, text2) {
   mark.style.color = "var(--ink-dim)";
   mark.style.font = "600 9px/1 var(--sans)";
   mark.style.cursor = "help";
-  mark.style.transform = "translateY(1px)";
+  mark.style.transform = "translateY(0)";
+  return mark;
+}
+function fieldHintMark(ctx, text2) {
+  const mark = hintMark(ctx, text2);
+  mark.style.verticalAlign = "middle";
+  mark.style.marginLeft = "5px";
+  mark.style.transform = "translateY(-1px)";
   return mark;
 }
 function errorText(error) {
@@ -729,18 +734,11 @@ function mountFeeds(ctx) {
     bar.append(...controls);
     return bar;
   }
-  function checkGroup(check, hint) {
-    const cell = ctx.ui.h("div", null);
-    check.el.appendChild(hintMark(ctx, hint));
-    check.el.style.marginTop = "14px";
-    cell.appendChild(check.el);
-    return cell;
-  }
   function buildFormFields(body, feed) {
     const title = ctx.ui.input({ placeholder: t.fieldTitlePlaceholder });
     title.value = feed?.title ?? "";
     const notify = ctx.ui.select();
-    for (const [value, label] of [["notify", t.notifyBadge.notify], ["digest", t.notifyBadge.digest], ["mute", t.notifyBadge.mute]]) {
+    for (const [value, label] of [["notify", t.notifyBadge.notify], ["mute", t.notifyBadge.mute]]) {
       notify.appendChild(new Option(label, value));
     }
     notify.value = feed?.notify ?? "notify";
@@ -752,18 +750,19 @@ function mountFeeds(ctx) {
     const fullText = ctx.ui.checkbox(t.fieldFullText);
     fullText.setChecked(feed ? feed.fullText !== false : true);
     body.appendChild(formRow([
-      { el: ctx.ui.field(t.fieldTitle, title), width: "260px" },
-      { el: ctx.ui.field(t.fieldNotify, notify), width: "190px" },
-      { el: ctx.ui.h("div", "grow") }
+      { el: ctx.ui.field(t.fieldTitle, title), grow: true }
     ]));
     body.appendChild(formRow([
       { el: ctx.ui.field(t.fieldInterval, interval), width: "190px" },
-      { el: ctx.ui.field(t.fieldUA, userAgent), grow: true }
+      { el: ctx.ui.field(t.fieldNotify, notify), width: "190px" }
     ]));
-    body.appendChild(ctx.ui.h("div", "sectionhead", t.sectionFetchTitle));
+    fullText.el.appendChild(hintMark(ctx, t.fieldFullTextHint));
+    fullText.el.style.marginTop = "14px";
+    const fetchRow = ctx.ui.h("div", null);
+    fetchRow.appendChild(fullText.el);
+    body.appendChild(fetchRow);
     body.appendChild(formRow([
-      { el: checkGroup(fullText, t.fieldFullTextHint), grow: true },
-      { el: ctx.ui.h("div", "grow") }
+      { el: ctx.ui.field(t.fieldUA, userAgent), grow: true }
     ]));
     return { title, notify, interval, userAgent, fullText: fullText.input };
   }
@@ -1078,6 +1077,11 @@ function mountConfigForm(ctx, sheets, onSaved) {
     message.textContent = body;
     message.classList.toggle("bad", bad);
   };
+  const attachHint = (el, hint) => {
+    if (!hint) return;
+    const caption = el.querySelector(".fieldlabel");
+    if (caption) caption.appendChild(fieldHintMark(ctx, hint));
+  };
   const readers = /* @__PURE__ */ new Map();
   for (const sheetSpec of sheets) {
     const sheet = ctx.ui.sheet({ title: sheetSpec.title, desc: sheetSpec.desc });
@@ -1090,7 +1094,9 @@ function mountConfigForm(ctx, sheets, onSaved) {
         });
         if (field.hint) check.el.appendChild(hintMark(ctx, field.hint));
         check.el.style.marginTop = "14px";
-        sheet.body.appendChild(check.el);
+        const boolRow = ctx.ui.h("div", null);
+        boolRow.appendChild(check.el);
+        sheet.body.appendChild(boolRow);
       } else if (field.kind === "enum") {
         const select = ctx.ui.select();
         for (const option of field.options ?? []) select.appendChild(new Option(option.label, option.value));
@@ -1100,7 +1106,9 @@ function mountConfigForm(ctx, sheets, onSaved) {
             select.value = raw == null ? "" : String(raw);
           }
         });
-        sheet.body.appendChild(ctx.ui.field(field.label, select));
+        const selectField = ctx.ui.field(field.label, select);
+        attachHint(selectField, field.hint);
+        sheet.body.appendChild(selectField);
       } else {
         const input = ctx.ui.input({ type: field.kind === "number" ? "number" : "text", placeholder: field.placeholder });
         if (field.kind === "time") input.type = "time";
@@ -1110,7 +1118,9 @@ function mountConfigForm(ctx, sheets, onSaved) {
             input.value = field.kind === "time" ? timeValue(raw) : raw == null ? "" : String(raw);
           }
         });
-        sheet.body.appendChild(ctx.ui.field(field.label, input));
+        const textField = ctx.ui.field(field.label, input);
+        attachHint(textField, field.hint);
+        sheet.body.appendChild(textField);
       }
     }
     ctx.root.appendChild(sheet.el);
@@ -1155,18 +1165,18 @@ function mountNotify(ctx) {
       title: t.sheetDisturbTitle,
       desc: t.sheetDisturbDesc,
       fields: [
-        { key: "digestEnabled", label: t.digestEnabledTitle, kind: "bool" },
+        { key: "digestEnabled", label: t.digestEnabledTitle, kind: "bool", hint: t.digestEnabledDescription },
         { key: "digestTime", label: t.digestTimeTitle, kind: "time" },
+        { key: "startupNotify", label: t.startupNotifyTitle, kind: "bool", hint: t.startupNotifyDescription },
         { key: "autoMarkReadOnNotify", label: t.autoMarkTitle, kind: "bool" }
       ]
     },
     {
       title: t.sheetBatchTitle,
       fields: [
-        { key: "eventBatchSeconds", label: t.eventBatchTitle, kind: "number" },
-        { key: "eventMaxHeadlines", label: t.eventMaxHeadlinesTitle, kind: "number" },
-        { key: "eventMaxChars", label: t.eventMaxCharsTitle, kind: "number" },
-        { key: "watchKeywords", label: t.watchKeywordsTitle, kind: "string" }
+        { key: "eventBatchSeconds", label: t.eventBatchTitle, kind: "number", hint: t.eventBatchDescription },
+        { key: "eventMaxHeadlines", label: t.eventMaxHeadlinesTitle, kind: "number", hint: t.eventMaxHeadlinesDescription },
+        { key: "eventMaxChars", label: t.eventMaxCharsTitle, kind: "number" }
       ]
     }
   ], () => {

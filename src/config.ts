@@ -19,12 +19,12 @@ export interface RssConfigSection {
   eventMaxHeadlines: number;
   /** 单条事件的字符上限。 */
   eventMaxChars: number;
-  /** 全局关注关键词,逗号分隔;命中的条目排在事件前面。 */
-  watchKeywords: string;
   /** 每日晨报开关。 */
   digestEnabled: boolean;
   /** 晨报时刻 "09:00"(部署时区)。 */
   digestTime: string;
+  /** 应用启动时立即拉取全部源并播报本次新内容。 */
+  startupNotify: boolean;
   /** 事件送达后是否顺手标已读。默认关:推送不等于用户看过。 */
   autoMarkReadOnNotify: boolean;
   /** 条目保留天数;compact 每轮现读,改了即时生效。 */
@@ -39,7 +39,7 @@ export interface RssConfigSection {
 
 export const RSS_ID = 'rss';
 
-export const NOTIFY_MODES = ['notify', 'digest', 'mute'] as const;
+export const NOTIFY_MODES = ['notify', 'mute'] as const;
 export type NotifyMode = (typeof NOTIFY_MODES)[number];
 
 export const RSS_DEFAULTS: RssConfigSection = {
@@ -51,9 +51,9 @@ export const RSS_DEFAULTS: RssConfigSection = {
   eventBatchSeconds: 20,
   eventMaxHeadlines: 8,
   eventMaxChars: 1200,
-  watchKeywords: '',
   digestEnabled: false,
   digestTime: '09:00',
+  startupNotify: true,
   autoMarkReadOnNotify: false,
   retentionDays: 30,
   maxItemsTotal: 2_000,
@@ -133,12 +133,6 @@ export function rssConfigGroup(language: Language): ConfigGroup {
           maximum: 4_000,
           'x-hot': true,
         },
-        'worlds.rss.watchKeywords': {
-          type: 'string',
-          title: t.watchKeywordsTitle,
-          description: t.watchKeywordsDescription,
-          'x-hot': true,
-        },
         'worlds.rss.digestEnabled': {
           type: 'boolean',
           title: t.digestEnabledTitle,
@@ -149,6 +143,12 @@ export function rssConfigGroup(language: Language): ConfigGroup {
           type: 'string',
           title: t.digestTimeTitle,
           description: t.digestTimeDescription,
+          'x-hot': true,
+        },
+        'worlds.rss.startupNotify': {
+          type: 'boolean',
+          title: t.startupNotifyTitle,
+          description: t.startupNotifyDescription,
           'x-hot': true,
         },
         'worlds.rss.autoMarkReadOnNotify': {
@@ -225,9 +225,9 @@ export function rssConfigGroups(language: Language): ConfigGroup[] {
         'worlds.rss.eventBatchSeconds',
         'worlds.rss.eventMaxHeadlines',
         'worlds.rss.eventMaxChars',
-        'worlds.rss.watchKeywords',
         'worlds.rss.digestEnabled',
         'worlds.rss.digestTime',
+        'worlds.rss.startupNotify',
         'worlds.rss.autoMarkReadOnNotify',
       ],
       `world:${RSS_ID}.notify`,

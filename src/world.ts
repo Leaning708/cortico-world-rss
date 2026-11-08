@@ -95,7 +95,7 @@ export const RSS_TOOL_DECLS: ReadonlyArray<Omit<ToolDef, 'handler'>> = [
       properties: {
         url: { type: 'string', description: 'Site or feed URL, http(s).' },
         title: { type: 'string', description: 'Custom display name; defaults to the feed own title.' },
-        notify: { type: 'string', enum: [...NOTIFY_MODES], description: 'notify pushes live (default), digest only appears in the daily digest, mute only fills the inbox.' },
+        notify: { type: 'string', enum: [...NOTIFY_MODES], description: 'notify pushes live (default); mute only fills the inbox and is never announced (digest or startup included).' },
         intervalMinutes: { type: 'integer', minimum: 0, maximum: 1440, description: 'Poll interval override in minutes; 0 uses the global default (min 1).' },
         userAgent: { type: 'string', description: 'Per-feed User-Agent override; empty uses the built-in Coopanion RSS Reader/<version> UA.' },
         fullText: { type: 'boolean', description: 'Allow rss_read(full) to fetch article pages for this feed. Default true.' },
@@ -311,17 +311,27 @@ export class RssWorld implements World {
 
   private renderDigest(): string | null {
     const now = this.now();
+    // 计数覆盖全库(含静默源):用户明确要求晨报统计包含静默数据。
     const fetched = this.store.countSince(24 * 3600 * 1000, now);
     const unread = this.store.unreadCount();
     if (fetched === 0 && unread === 0) return null;
-    const { items } = this.store.itemsQuery({ scope: 'unread', limit: 3 });
+    // 重点只列会播报的源(非静默),静默源内容永远不进入晨报正文。
+    const broadcastIds = this.store.feeds().filter((feed) => feed.notify === 'notify').map((feed) => feed.id);
+    const broadcastUnread = broadcastIds.reduce((sum, id) => sum + this.store.unreadCount(id), 0);
+    const silentUnread = unread - broadcastUnread;
+    const { items } = this.store.itemsQuery({ scope: 'unread', limit: 3, feedIds: broadcastIds });
     const lines = items.map((item) => {
       const feed = this.store.feed(item.feedId);
       return `① [${feed?.title ?? item.feedId}] ${item.title.slice(0, 80)}`;
     });
+    const highlightLine = lines.length > 0
+      ? `未读重点:\n${lines.join('\n')}`
+      : silentUnread > 0
+        ? `未读里暂时没有需要播报的条目(静默源的 ${silentUnread} 条只留在收件箱)。`
+        : '没有积压的未读，收件箱是干净的。';
     const parts = [
       `RSS 晨报：过去 24 小时收到 ${fetched} 条新内容，当前未读 ${unread} 条。`,
-      lines.length > 0 ? `未读重点:\n${lines.join('\n')}` : '没有积压的未读，收件箱是干净的。',
+      highlightLine,
     ];
     return parts.join('\n');
   }
@@ -351,6 +361,12 @@ export class RssWorld implements World {
     this.host = host;
     this.feedErrorLastAt.clear();
     this.poller.start();
+    // 启动播报:立即拉取全部未暂停源;refresh 结束会立刻合批推送(静默源已被过滤)。
+    if (this.cfg.startupNotify) {
+      void this.poller.refresh().catch((error) => {
+        this.logger.warn(`启动刷新失败:${error instanceof Error ? error.message : String(error)}`);
+      });
+    }
   }
 
   async stop(): Promise<void> {
@@ -883,8 +899,8 @@ export const RSS_EVENT_DESCS = [
   {
     type: 'rss.daily_digest',
     description: {
-      zh: '每日晨报：过去 24 小时的收件统计与未读重点；当天没有内容就不发。',
-      en: 'Daily digest: last-24h counts and unread highlights; silent when nothing arrived.',
+      zh: '每日晨报：过去 24 小时全库收件统计与未读计数(含静默源)，并列最多 3 条非静默源的未读重点；当天没有内容就不发。',
+      en: 'Daily digest: last-24h counts across all feeds (muted included), plus up to 3 unread highlights from non-muted feeds.',
     },
   },
 ] as const;

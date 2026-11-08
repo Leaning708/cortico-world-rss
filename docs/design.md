@@ -1,6 +1,6 @@
 # Coopanion × RSS 订阅 World 扩展 · 设计方案
 
-> 状态：**已实现并持续迭代（当前 0.1.36，2026-11-09）**——M0–M3 全部落地；83 个单元用例 + 9 个真机集成用例（`RSS_LIVE_TEST=1`，自带本地 RSS 测试服务器 `scripts/feed-server.mjs`）全绿，`describe.json` 与代码一致性由测试守护。**设计写于开发之前，实现中多处演进——先读 §0.2「实现与设计的偏差对照」，再查各节**；工程命令、变更触点清单与踩坑记录见仓库根 `AGENTS.md`。
+> 状态：**已实现并持续迭代（当前 0.1.43，2026-11-09）**——M0–M3 全部落地；87 个单元用例 + 9 个真机集成用例（`RSS_LIVE_TEST=1`，自带本地 RSS 测试服务器 `scripts/feed-server.mjs`）全绿，`describe.json` 与代码一致性由测试守护。**设计写于开发之前，实现中多处演进——先读 §0.2「实现与设计的偏差对照」，再查各节**；工程命令、变更触点清单与踩坑记录见仓库根 `AGENTS.md`。
 > 目标读者：项目作者（你）与后续维护者
 > 相关资料：`.agents/skills/coopanion-plugin-dev/SKILL.md`（扩展开发规范）、`../cortico-world-homeassistant/docs/reference/`（官方契约快照）、`../cortico-world-homeassistant/docs/design.md`（姊妹设计，格式基线）
 
@@ -13,10 +13,12 @@
 | 主题 | 设计原文 | 当前实现 |
 |---|---|---|
 | 配置通道（§6.6/§8） | `worlds.rss.*` 全局配置组 + 内建「配置」标签 | **不声明 config 组**，内建「配置」标签不渲染；配置在「通知」「设置」两个表单标签，保存走 `config.save`（config-save.ts 白名单校验 + `ctx.persist`） |
-| 配置项清单（§6.6） | 19 键（含全局 `allowPrivateFeeds`/`fullTextFetch`） | **全局项删除了那两个**，新增 `maxItemsTotal`（2000）/`maxItemsPerFeed`（200）/`baselineAsRead`（开）；0.1.34 再移除 `notifyDefault`/`quietHours`/`baselineNotifyCount`，0.1.36 移除 `userAgent`——**现 15 键**；清理预算是 store 持有的活对象，`config.save` 即时同步 |
+| 配置项清单（§6.6） | 19 键（含全局 `allowPrivateFeeds`/`fullTextFetch`） | **全局项删除了那两个**，新增 `maxItemsTotal`（2000）/`maxItemsPerFeed`（200）/`baselineAsRead`（开）；0.1.34 再移除 `notifyDefault`/`quietHours`/`baselineNotifyCount`，0.1.36 移除 `userAgent`；0.1.38 新增 `startupNotify`，0.1.40 移除 `watchKeywords`——**现 15 键**；清理预算是 store 持有的活对象，`config.save` 即时同步 |
 | 私网/全文开关 | 全局开关 | **按源存于 FeedRecord**（`fullText`），详情弹框与 `rss_add` 参数单独开关；`allowPrivate` 已于 0.1.36 连同私网拦截一起移除 |
+| 关注关键词与通知文案（0.1.40） | 全局 watchKeywords 排序；「事件合批窗口」「每次最多播报几条」 | watchKeywords 全移除；窗口文案改为「播报合并窗口（秒）」并加悬停说明；条目上限改名并说明超限不丢弃、顺延到下一波 |
+| 通知策略与启动播报（0.1.38） | 每源 notify/digest/mute；晨报只列未读重点；无启动播报 | **每源只剩实时/静默**(旧 digest 自动迁 mute)；静默源不参与实时、晨报重点与启动播报；晨报统计数字仍含静默源(全库)；新增 `startupNotify`(默认开):启动即拉取全部源并马上播报本次新内容 |
 | 私网与 UA（0.1.36） | 按源「允许私网地址」开关、全局默认 User-Agent | **均移除**：私网/本机地址默认允许（不再有开关，SSRF 防线去掉）；UA 默认固定为动态的 `Coopanion RSS Reader/<插件版本>`，单源仍可覆盖 |
-| 通知/过滤配置（0.1.34） | 免打扰时段、新源默认通知策略、新订阅立即推送条数、每源 include/exclude | **全部移除**：新源固定实时推送（per-feed 策略仍可改）、订阅历史默认静默、条目默认全推；运行时不再有 quiet hours / piggyback / promote、也不再有每源关键词过滤（全局 `watchKeywords` 仍保留，只影响事件内排序） |
+| 通知/过滤配置（0.1.34） | 免打扰时段、新源默认通知策略、新订阅立即推送条数、每源 include/exclude | **全部移除**：新源固定实时推送（per-feed 策略仍可改）、订阅历史默认静默、条目默认全推；运行时不再有 quiet hours / piggyback / promote、也不再有每源关键词过滤；全局 `watchKeywords` 也于 0.1.40 移除 |
 | 面板结构（§8） | 单一 `manage` 面板 | **五个面板=五个标签**：订阅源/收件箱/通知/设置/OPML；每源「详情」与「添加订阅」为抽屉弹框 |
 | 手动拉取 | 仅 `rss_refresh` 工具 | 工具保留；新增面板数据面 `feeds.refresh` + 表格上方「拉取全部」/每行「拉取」按钮 |
 | 收件箱（§8） | 无分页无过滤 | 每页 10 条；≤10 页整表直出、>10 页分页；源过滤下拉；「全部已读」（danger + 确认）；空态保留 10 行高度居中提示 |
@@ -175,7 +177,7 @@ flowchart LR
     "id": "f_9k2x",                 // 短 id，工具与面板都用它
     "url": "https://example.com/feed.xml",
     "title": "阮一峰的网络日志",      // 首次解析取 feed 自带 title，可被用户改
-    "notify": "notify",             // notify | digest | mute
+    "notify": "notify",             // notify | mute
     "intervalMinutes": 30,          // 0 = 用全局默认
     "paused": false,
     "weight": 1,                    // 机械排序权重 1..5
@@ -340,7 +342,7 @@ export default {
 |---|---|---|---|---|
 | `rss.new_items` | `external` | `debounce`（框架默认，配合扩展侧 20s 合批窗口） | 见 §7 样例，≤8 头条 / 1200 字符 | `{ feedIds, itemIds, total, dropped }` |
 | `rss.feed_error` | `internal` | `debounce`，同一源 6h 节流 | `「源名」连续 3 次拉取失败（404）：可能已迁移，可在面板检查或退订` | `{ feedId, code, consecutiveErrors }` |
-| `rss.daily_digest` | `internal` | `flush`，**`pushDeferred` 生成**（投递时现算，当天 0 条新内容则 render 返回 null → 不投递） | 昨日晨报：`收 X 条 / Y 源，未读 Z 条；重点 3 条 + 链接` | `{ date, counts }` |
+| `rss.daily_digest` | `internal` | `flush`，**`pushDeferred` 生成**（投递时现算，全库 0 条新内容且 0 未读则 render 返回 null → 不投递） | 昨日晨报：全库 `收 X 条 / 未读 Z 条`（含静默源）+ 最多 3 条非静默源未读重点；全静默时只报统计并说明只在收件箱 | `{ date, counts }` |
 
 规则：
 
@@ -371,9 +373,9 @@ export default {
 | `eventBatchSeconds` | int | `20` (5–120) | 是 | 合批窗口 |
 | `eventMaxHeadlines` | int | `8` (1–20) | 是 | 单事件头条上限 |
 | `eventMaxChars` | int | `1200` (400–4000) | 是 | 单事件字符上限 |
-| `watchKeywords` | string | 空 | 是 | 逗号分隔；命中的条目在事件内排前 |
 | `digestEnabled` | bool | `false` | 是 | 每日晨报开关 |
 | `digestTime` | string | `09:00` | 是 | 晨报时刻（同上时区） |
+| `startupNotify` | bool | `true` | 是 | 启动后立即拉取全部源并马上播报本次新内容（静默源不参与） |
 | `autoMarkReadOnNotify` | bool | `false` | 是 | 推送即视为已读（不推荐默认开：用户可能没看） |
 | `retentionDays` | int | `30` (3–365) | 否 | 条目保留期 |
 
@@ -391,8 +393,8 @@ export default {
 
 ```
 新条目(本轮询窗口)
-  → 源级过滤: paused / notify=mute|digest → 只入库不进事件
-  → 机械打分: watchKeywords 命中 +3 / feed weight / 新鲜度(1h 内 +2)
+  → 源级过滤: paused / notify=mute → 只入库不进事件
+  → 机械打分: feed weight / 新鲜度(1h 内 +2)
   → 合批窗口(20s) 聚合 → 按分排序 → 截前 eventMaxHeadlines 条
   → 机械压缩: 标题 ≤80 字 + 摘要 ≤100 字(纯文本去标签)
   → pushEvent(rss.new_items, debounce)
@@ -418,9 +420,10 @@ Coo 的实际通知（主循环产出，非本扩展代码）：
 
 | 场景 | 行为 |
 |---|---|
-| `digest` 源（如低频博客） | 不发实时事件，只进晨报与收件箱 |
+| `mute` 源（如低频博客） | 不发实时事件，也不进晨报重点/启动播报，只进收件箱 |
 | `mute` 源 | 不发实时事件，只入库、收件箱可见 |
-| 晨报时刻 | `pushDeferred` 现算昨日统计与未读重点；0 条则静默（render null 不投递） |
+| 晨报时刻 | `pushDeferred` 现算昨日全库统计与未读重点；0 条且 0 未读则静默（render null 不投递） |
+| 应用启动 | `startupNotify` 开时立即 `refresh()` 全部源，refresh 结束即合批播报本次新内容 |
 
 ### 7.4 P2：`cognition` 后台预摘要
 
@@ -563,7 +566,7 @@ cortico-world-rss/
 5. 添 `http://localhost:8080/feed` → 直接订阅成功（0.1.36 起默认允许私网）。
 6. 断网 10 分钟 → 恢复后补拉、无重复推送；某源 404 三次 → `feed_error` 事件 + 面板红灯。
 7. 导出 OPML → 用其它阅读器导入成功；反向导入 100 源 → 容量截断如实报告。
-8. `digest` 源不出现在实时通知，次晨的数字统计里可见；`mute` 源只进收件箱。
+8. `mute` 源不出现在实时通知、晨报重点和启动播报里，只进收件箱；晨报统计数字仍包含它。重启应用验证启动播报开关。
 
 ---
 
@@ -589,13 +592,14 @@ cortico-world-rss/
 |---|---|---|
 | 合批摘要通知 | **v1** | 本方案核心 |
 | 站点自动发现 feed | **v1** | `rss_add` 收站点 URL，读 `<link rel="alternate">` |
-| 每源通知策略 notify/digest/mute | **v1** | 低频博客不实时吵 |
+| 每源通知策略 notify/mute | **v1** | 低频博客不实时吵(静默源只进收件箱) |
 | 稍后读 starred | **v1** | 豁免清理，`rss_mark` 一并实现 |
 | OPML 导入导出 | **v1** | 与其它阅读器互通 |
 | 源健康诊断 + feed_error | **v1** | 404/403/DNS 分类文案 |
 | 全文抓取 + 正文抽取 | **v1** | `rss_read(full:true)`，轻量抽取器 |
 | GBK 编码、UA 覆盖 | **v1** | 中文老站实测刚需 |
-| 每日晨报 | **v1** | pushDeferred 实现，0 条静默 |
+| 每日晨报 | **v1** | pushDeferred 实现；统计含静默源，重点只列非静默源 |
+| 启动时播报最新消息 | **v1** | `startupNotify`:启动立即刷新并合批播报 |
 | cognition 后台预摘要 | P2 | 长文先摘后推，feature-detect 回落 |
 | WebSub 实时推送 | P2 | 轮询之上的省电优化 |
 | 每源自适应间隔 | P2 | 按历史更新频率伸缩轮询周期 |

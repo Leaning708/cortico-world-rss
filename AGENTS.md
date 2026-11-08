@@ -27,7 +27,7 @@ RSS_LIVE_TEST=1 npx vitest run tests/live.test.ts  # 真机集成(自起测试�
 | `src/extract.ts` | 文章正文抽取(rss_read full) |
 | `src/chrono.ts` | 时区时间:晨报时刻、相对时间 |
 | `src/opml.ts` | OPML 导入导出 |
-| `src/world.ts` | 主体:7 工具、3 事件、面板数据面(invoke 按 method 分发)、事件投递 |
+| `src/world.ts` | 主体:7 工具、3 事件、面板数据面(invoke 按 method 分发)、事件投递、启动播报 |
 | `src/definition.ts` | WorldDefinition(persist 通道在这里接 `ctx.persist`) |
 | `src/strings.ts` | zh/en 全部文案,**两份结构必须对称**(`typeof zh` 约束) |
 | `src/webui/client.ts` | 浏览器面板:五个标签 = 订阅源/收件箱/通知/高级/OPML |

@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import type { ParsedItem } from './parse.ts';
 
-export type NotifyMode = 'notify' | 'digest' | 'mute';
+export type NotifyMode = 'notify' | 'mute';
 
 export interface FeedRecord {
   id: string;
@@ -113,10 +113,15 @@ export class RssStore {
     this.compact(new Date());
   }
 
-  /** 旧版本文件缺 fullText 字段时补默认值(私有:加载即迁移);已移除的每源字段顺手清掉。 */
+  /** 旧版本文件缺字段时补默认值(私有:加载即迁移);已移除的每源字段顺手清掉。 */
   private migrateFeeds(): void {
     for (const feed of this.feedsData.feeds) {
       if (typeof feed.fullText !== 'boolean') feed.fullText = true;
+      // 0.1.38 移除「晨报」策略:旧值迁到「静默」,永不播报。
+      if ((feed.notify as string) === 'digest') {
+        feed.notify = 'mute';
+        this.dirty = true;
+      }
       const legacy = feed as unknown as Record<string, unknown>;
       delete legacy.include;
       delete legacy.exclude;
@@ -316,6 +321,8 @@ export class RssStore {
 
   itemsQuery(opts: {
     feedId?: string;
+    /** 限定源集合(晨报只列非静默源的未读重点);不传 = 全库。 */
+    feedIds?: readonly string[];
     scope?: 'unread' | 'all' | 'starred';
     query?: string;
     limit?: number;
@@ -323,8 +330,10 @@ export class RssStore {
   }): { total: number; items: ItemRecord[] } {
     const scope = opts.scope ?? 'unread';
     const query = opts.query?.trim().toLowerCase() ?? '';
+    const feedFilter = opts.feedIds ? new Set(opts.feedIds) : null;
     const matched = this.itemsData.items.filter((item) => {
       if (opts.feedId && item.feedId !== opts.feedId) return false;
+      if (feedFilter && !feedFilter.has(item.feedId)) return false;
       if (scope === 'unread' && item.read) return false;
       if (scope === 'starred' && !item.starred) return false;
       if (query && !`${item.title}\n${item.plain}`.toLowerCase().includes(query)) return false;

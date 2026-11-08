@@ -18,9 +18,9 @@ export const RSS_CONFIG_KEYS = [
   'eventBatchSeconds',
   'eventMaxHeadlines',
   'eventMaxChars',
-  'watchKeywords',
   'digestEnabled',
   'digestTime',
+  'startupNotify',
   'autoMarkReadOnNotify',
   'retentionDays',
   'maxItemsTotal',
@@ -42,8 +42,8 @@ const NUMBER_RANGES: Partial<Record<RssConfigKey, { min: number; max: number; st
   maxItemsPerFeed: { min: 20, max: 5_000 },
 };
 
-const STRING_KEYS: readonly RssConfigKey[] = ['watchKeywords', 'digestTime'];
-const BOOL_KEYS: readonly RssConfigKey[] = ['digestEnabled', 'autoMarkReadOnNotify', 'baselineAsRead'];
+const STRING_KEYS: readonly RssConfigKey[] = ['digestTime'];
+const BOOL_KEYS: readonly RssConfigKey[] = ['digestEnabled', 'startupNotify', 'autoMarkReadOnNotify', 'baselineAsRead'];
 
 /** 改了要重启 World 才生效的字段(retentionDays 参与存储构造)。 */
 const RESTART_KEYS: readonly RssConfigKey[] = ['retentionDays'];

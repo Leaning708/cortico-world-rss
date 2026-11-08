@@ -24,7 +24,7 @@ interface FeedRow {
   id: string;
   url: string;
   title: string;
-  notify: 'notify' | 'digest' | 'mute';
+  notify: 'notify' | 'mute';
   intervalMinutes: number;
   paused: boolean;
   lastError: string | null;
@@ -85,8 +85,21 @@ function hintMark(ctx: WebUiPanelContext, text: string): HTMLElement {
   mark.style.color = 'var(--ink-dim)';
   mark.style.font = '600 9px/1 var(--sans)';
   mark.style.cursor = 'help';
-  // 圆比文字高,光学上下沉 1px 与文字重心平齐。
-  mark.style.transform = 'translateY(1px)';
+  // 圆比文字高,居中对齐后不再额外下沉,避免小字号下显得偏低。
+  mark.style.transform = 'translateY(0)';
+  return mark;
+}
+
+/**
+ * 字段标签(小号灰字)旁的提示标记:字段标签不是 flex 容器,圆圈在行内按基线对齐会偏下,
+ * 改用 vertical-align:middle 居中,并比勾选旁的标记多留一点间距。
+ */
+function fieldHintMark(ctx: WebUiPanelContext, text: string): HTMLElement {
+  const mark = hintMark(ctx, text);
+  mark.style.verticalAlign = 'middle';
+  mark.style.marginLeft = '5px';
+  // 小号标签的盒中心低于文字视觉重心,再上提 1px 才与字形平齐。
+  mark.style.transform = 'translateY(-1px)';
   return mark;
 }
 
@@ -479,20 +492,11 @@ function mountFeeds(ctx: WebUiPanelContext): void {
     return bar;
   }
 
-  /** 勾选框 + "!"悬浮提示标记(解释收进 title,悬停出气泡);两组合进一行。 */
-  function checkGroup(check: { el: HTMLElement; input: HTMLInputElement }, hint: string): HTMLElement {
-    const cell = ctx.ui.h('div', null);
-    check.el.appendChild(hintMark(ctx, hint));
-    check.el.style.marginTop = '14px';
-    cell.appendChild(check.el);
-    return cell;
-  }
-
   function buildFormFields(body: HTMLElement, feed?: FeedRow): FormControls {
     const title = ctx.ui.input({ placeholder: t.fieldTitlePlaceholder });
     title.value = feed?.title ?? '';
     const notify = ctx.ui.select();
-    for (const [value, label] of [['notify', t.notifyBadge.notify], ['digest', t.notifyBadge.digest], ['mute', t.notifyBadge.mute]] as const) {
+    for (const [value, label] of [['notify', t.notifyBadge.notify], ['mute', t.notifyBadge.mute]] as const) {
       notify.appendChild(new Option(label, value));
     }
     notify.value = feed?.notify ?? 'notify';
@@ -504,21 +508,24 @@ function mountFeeds(ctx: WebUiPanelContext): void {
     const fullText = ctx.ui.checkbox(t.fieldFullText);
     fullText.setChecked(feed ? feed.fullText !== false : true);
 
-    // 基础设置:短字段两两并排,控制弹框高度。
+    // 名称独占一行。
     body.appendChild(formRow([
-      { el: ctx.ui.field(t.fieldTitle, title), width: '260px' },
-      { el: ctx.ui.field(t.fieldNotify, notify), width: '190px' },
-      { el: ctx.ui.h('div', 'grow') },
+      { el: ctx.ui.field(t.fieldTitle, title), grow: true },
     ]));
+    // 检查间隔 / 通知策略 同一行。
     body.appendChild(formRow([
       { el: ctx.ui.field(t.fieldInterval, interval), width: '190px' },
-      { el: ctx.ui.field(t.fieldUA, userAgent), grow: true },
+      { el: ctx.ui.field(t.fieldNotify, notify), width: '190px' },
     ]));
-    // 抓取设置。
-    body.appendChild(ctx.ui.h('div', 'sectionhead', t.sectionFetchTitle));
+    // 允许抓取原文:在检查间隔下方单独一行、靠左。
+    fullText.el.appendChild(hintMark(ctx, t.fieldFullTextHint));
+    fullText.el.style.marginTop = '14px';
+    const fetchRow = ctx.ui.h('div', null);
+    fetchRow.appendChild(fullText.el);
+    body.appendChild(fetchRow);
+    // User-Agent 独占一行。
     body.appendChild(formRow([
-      { el: checkGroup(fullText, t.fieldFullTextHint), grow: true },
-      { el: ctx.ui.h('div', 'grow') },
+      { el: ctx.ui.field(t.fieldUA, userAgent), grow: true },
     ]));
     return { title, notify, interval, userAgent, fullText: fullText.input };
   }
@@ -901,6 +908,12 @@ function mountConfigForm(
     message.textContent = body;
     message.classList.toggle('bad', bad);
   };
+  /** 非布尔字段的说明:把 `!` 提示标记追加到字段标签右侧。 */
+  const attachHint = (el: HTMLElement, hint?: string): void => {
+    if (!hint) return;
+    const caption = el.querySelector('.fieldlabel');
+    if (caption) caption.appendChild(fieldHintMark(ctx, hint));
+  };
   const readers = new Map<string, FieldReader>();
 
   for (const sheetSpec of sheets) {
@@ -914,7 +927,10 @@ function mountConfigForm(
         });
         if (field.hint) check.el.appendChild(hintMark(ctx, field.hint));
         check.el.style.marginTop = '14px';
-        sheet.body.appendChild(check.el);
+        // label.check 是 inline-flex:相邻 bool 会被排成一行,套一层块级容器保证各占一行。
+        const boolRow = ctx.ui.h('div', null);
+        boolRow.appendChild(check.el);
+        sheet.body.appendChild(boolRow);
       } else if (field.kind === 'enum') {
         const select = ctx.ui.select();
         for (const option of field.options ?? []) select.appendChild(new Option(option.label, option.value));
@@ -922,7 +938,9 @@ function mountConfigForm(
           read: () => select.value,
           write: (raw) => { select.value = raw == null ? '' : String(raw); },
         });
-        sheet.body.appendChild(ctx.ui.field(field.label, select));
+        const selectField = ctx.ui.field(field.label, select);
+        attachHint(selectField, field.hint);
+        sheet.body.appendChild(selectField);
       } else {
         const input = ctx.ui.input({ type: field.kind === 'number' ? 'number' : 'text', placeholder: field.placeholder });
         if (field.kind === 'time') input.type = 'time';
@@ -930,7 +948,9 @@ function mountConfigForm(
           read: () => input.value,
           write: (raw) => { input.value = field.kind === 'time' ? timeValue(raw) : raw == null ? '' : String(raw); },
         });
-        sheet.body.appendChild(ctx.ui.field(field.label, input));
+        const textField = ctx.ui.field(field.label, input);
+        attachHint(textField, field.hint);
+        sheet.body.appendChild(textField);
       }
     }
     ctx.root.appendChild(sheet.el);
@@ -981,18 +1001,18 @@ function mountNotify(ctx: WebUiPanelContext): void {
       title: t.sheetDisturbTitle,
       desc: t.sheetDisturbDesc,
       fields: [
-        { key: 'digestEnabled', label: t.digestEnabledTitle, kind: 'bool' },
+        { key: 'digestEnabled', label: t.digestEnabledTitle, kind: 'bool', hint: t.digestEnabledDescription },
         { key: 'digestTime', label: t.digestTimeTitle, kind: 'time' },
+        { key: 'startupNotify', label: t.startupNotifyTitle, kind: 'bool', hint: t.startupNotifyDescription },
         { key: 'autoMarkReadOnNotify', label: t.autoMarkTitle, kind: 'bool' },
       ],
     },
     {
       title: t.sheetBatchTitle,
       fields: [
-        { key: 'eventBatchSeconds', label: t.eventBatchTitle, kind: 'number' },
-        { key: 'eventMaxHeadlines', label: t.eventMaxHeadlinesTitle, kind: 'number' },
+        { key: 'eventBatchSeconds', label: t.eventBatchTitle, kind: 'number', hint: t.eventBatchDescription },
+        { key: 'eventMaxHeadlines', label: t.eventMaxHeadlinesTitle, kind: 'number', hint: t.eventMaxHeadlinesDescription },
         { key: 'eventMaxChars', label: t.eventMaxCharsTitle, kind: 'number' },
-        { key: 'watchKeywords', label: t.watchKeywordsTitle, kind: 'string' },
       ],
     },
   ], () => {});

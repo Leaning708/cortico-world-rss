@@ -138,6 +138,11 @@ describe('RssStore', () => {
         userAgent: '', createdAt: '2026-10-01T00:00:00Z',
         etag: null, lastModified: null, lastFetchAt: null, lastOkAt: null, lastError: null,
         consecutiveErrors: 0, nextPollAt: null, backoffIndex: 0, seenKeys: [],
+      }, {
+        id: 'f_digest', url: 'https://digest.org/feed', title: '旧晨报源', notify: 'digest',
+        intervalMinutes: 0, paused: false, weight: 1, userAgent: '', fullText: true,
+        createdAt: '2026-10-01T00:00:00Z', etag: null, lastModified: null, lastFetchAt: null,
+        lastOkAt: null, lastError: null, consecutiveErrors: 0, nextPollAt: null, backoffIndex: 0, seenKeys: [],
       }],
     }), 'utf8');
     const store = new RssStore(dir);
@@ -147,6 +152,11 @@ describe('RssStore', () => {
     // 已移除的每源关键词字段在加载时清掉。
     expect((feed as unknown as Record<string, unknown>).include).toBeUndefined();
     expect((feed as unknown as Record<string, unknown>).exclude).toBeUndefined();
+    // 0.1.38:旧 digest 策略迁移为静默,并落盘。
+    expect(store.feeds()[1]?.notify).toBe('mute');
+    store.flushNow();
+    const persisted = JSON.parse(readFileSync(join(dir, 'rss-feeds.json'), 'utf8')) as { feeds: Array<{ notify: string }> };
+    expect(persisted.feeds[1]?.notify).toBe('mute');
   });
 
   it('createFeed/updateFeed 支持 fullText 按源开关', () => {
