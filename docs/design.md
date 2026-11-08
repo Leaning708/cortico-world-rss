@@ -2,7 +2,7 @@
 
 > 状态：**已实现并持续迭代（当前 0.1.13，2026-11-08）**——M0–M3 全部落地；84 个单元用例 + 9 个真机集成用例（`RSS_LIVE_TEST=1`，自带本地 RSS 测试服务器 `scripts/feed-server.mjs`）全绿，`describe.json` 与代码一致性由测试守护。**设计写于开发之前，实现中多处演进——先读 §0.2「实现与设计的偏差对照」，再查各节**；工程命令、变更触点清单与踩坑记录见仓库根 `AGENTS.md`。
 > 目标读者：项目作者（你）与后续维护者
-> 相关资料：`.dsh/skills/coopanion-extension/SKILL.md`（扩展开发规范）、`../cortico-world-homeassistant/docs/reference/`（官方契约快照）、`../cortico-world-homeassistant/docs/design.md`（姊妹设计，格式基线）
+> 相关资料：`.agents/skills/coopanion-plugin-dev/SKILL.md`（扩展开发规范）、`../cortico-world-homeassistant/docs/reference/`（官方契约快照）、`../cortico-world-homeassistant/docs/design.md`（姊妹设计，格式基线）
 
 ---
 
@@ -628,7 +628,7 @@ cortico-world-rss/
 
 ## 16. 参考
 
-- 扩展开发规范（本仓库）：`.dsh/skills/coopanion-extension/SKILL.md`
+- 扩展开发规范（本仓库 skill）：`.agents/skills/coopanion-plugin-dev/SKILL.md`
 - Cortico 扩展契约：`../cortico-world-homeassistant/docs/reference/cortico-extensions.md`（快照）
 - Cortico World 契约：`../cortico-world-homeassistant/docs/reference/cortico-worlds.md`（快照）
 - 姊妹设计（格式与工程基线）：`../cortico-world-homeassistant/docs/design.md`

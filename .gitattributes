@@ -1,0 +1,4 @@
+# 仓库内 skill 的脚本与产物必须保持 LF 行尾：
+# Windows 上 core.autocrlf=true 会把检出文件转成 CRLF，.sh 带 CRLF 会被 bash 直接拒绝执行。
+# skill 统一放 .agents/skills/；.dsh/skills、.claude/skills 是指向 .agents/skills 的软链，CLAUDE.md 软链到 AGENTS.md。
+.agents/skills/** text eol=lf

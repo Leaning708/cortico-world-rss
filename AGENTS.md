@@ -35,11 +35,12 @@ RSS_LIVE_TEST=1 npx vitest run tests/live.test.ts  # 真机集成(自起测试�
 | `src/ENV_PROMPT.md` | 环境提示词(进 system 前缀) |
 | `scripts/describe.ts` | 生成 describe.json;`scripts/feed-server.mjs` 本地测试服务器 |
 | `describe.json` | 自描述产物,测试逐字比对,**改声明后必须重新生成** |
+| `.agents/skills/coopanion-plugin-dev/` | Coopanion 插件开发规范 skill(原 extension/panel-ui/webui-debug/restart 四个 skill 的合并版);改面板、重启、目检前先读。`.dsh/skills`、`.claude/skills` 是指向 `.agents/skills` 的软链,`CLAUDE.md` 软链到 `AGENTS.md` |
 
 ## 改动的标准闭环
 
 ```
-改代码 → 【bump package.json patch 版本】→ pnpm test(含面板构建)→ restart-coopanion skill → coopanion-webui-debug 目检
+改代码 → 【bump package.json patch 版本】→ pnpm test(含面板构建)→ coopanion-plugin-dev 的重启阶段 → 同一 skill 的目检阶段
 ```
 
 **版本必须 bump**:面板产物按 `/assets/extensions/<包>/<版本>/webui.js` 以 `Cache-Control: immutable` 提供——同版本内的改动,重启进程、换源都到不了浏览器。
@@ -61,7 +62,7 @@ RSS_LIVE_TEST=1 npx vitest run tests/live.test.ts  # 真机集成(自起测试�
 
 ### 改面板 UI
 
-遵循用户级 skill **coopanion-panel-ui**(组件行为、布局硬规则、对齐与缓存);目检用 **coopanion-webui-debug**;生效用 **restart-coopanion**。
+遵循本仓库 skill **coopanion-plugin-dev**(`.agents/skills/coopanion-plugin-dev/`;其 `references/panel-ui-spec.md` 与 `references/ui-components.md`:组件行为、布局硬规则、对齐与缓存);目检走该 skill 的「阶段 F:受控浏览器目检」;生效走「阶段 E:重启 Coopanion」。
 
 ## 已踩过的坑(别再踩)
 
