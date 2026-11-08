@@ -10,7 +10,11 @@ Coopanion(Cortico 框架)的 RSS 订阅 World 扩展:订阅多个 RSS 源,Coo �
 
 详细设计见 `docs/design.md`。
 
-## 安装(本机目录)
+## 安装
+
+> 发布到 npm 后,也可以在 Coopanion「扩展」页按包名 `cortico-world-rss` 安装。
+
+**本机目录安装(开发/试用)**:
 
 1. Coopanion「扩展」页 →「手动安装」→ 选本机目录(本包根目录)。框架先做只读校验,合格后以 `link:` 写入扩展工作区。
 2. **重启 Coopanion 进程**(`link:` 方式改代码也要重启)。

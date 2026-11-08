@@ -1,6 +1,6 @@
 # Coopanion × RSS 订阅 World 扩展 · 设计方案
 
-> 状态：**已实现并持续迭代（当前 0.1.43，2026-11-09）**——M0–M3 全部落地；87 个单元用例 + 9 个真机集成用例（`RSS_LIVE_TEST=1`，自带本地 RSS 测试服务器 `scripts/feed-server.mjs`）全绿，`describe.json` 与代码一致性由测试守护。**设计写于开发之前，实现中多处演进——先读 §0.2「实现与设计的偏差对照」，再查各节**；工程命令、变更触点清单与踩坑记录见仓库根 `AGENTS.md`。
+> 状态：**已实现并持续迭代（当前 0.2.0，2026-11-09）**——M0–M3 全部落地；87 个单元用例 + 9 个真机集成用例（`RSS_LIVE_TEST=1`，自带本地 RSS 测试服务器 `scripts/feed-server.mjs`）全绿，`describe.json` 与代码一致性由测试守护。**设计写于开发之前，实现中多处演进——先读 §0.2「实现与设计的偏差对照」，再查各节**；工程命令、变更触点清单与踩坑记录见仓库根 `AGENTS.md`。
 > 目标读者：项目作者（你）与后续维护者
 > 相关资料：`.agents/skills/coopanion-plugin-dev/SKILL.md`（扩展开发规范）、`../cortico-world-homeassistant/docs/reference/`（官方契约快照）、`../cortico-world-homeassistant/docs/design.md`（姊妹设计，格式基线）
 

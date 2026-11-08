@@ -1,8 +1,17 @@
 {
   "name": "cortico-world-rss",
-  "version": "0.1.43",
+  "version": "0.2.0",
   "type": "module",
   "description": "RSS World for Cortico: subscribe to multiple feeds, get condensed notifications from Coo, manage subscriptions from chat or WebUI",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:Leaning708/cortico-world-rss.git"
+  },
+  "homepage": "https://github.com/Leaning708/cortico-world-rss#readme",
+  "bugs": {
+    "url": "https://github.com/Leaning708/cortico-world-rss/issues"
+  },
+  "author": "Leaning708 <lnlnlnn708@163.com>",
   "keywords": [
     "cortico-world",
     "cortico",
