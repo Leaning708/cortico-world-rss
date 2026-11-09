@@ -81,7 +81,7 @@ pnpm bump:dev        # 0.3.0-dev.1 -> 0.3.0-dev.2；从 0.3.0 开始则 -> 0.3.0
 
 ## 版本与发布记录
 
-项目不在仓库内维护 `CHANGELOG` 文件。每个对外版本用 **GitHub Release** 记录变更，`package.json` 版本、git tag、Release 标题保持一致。
+项目在仓库根目录维护 `CHANGELOG.md`，每个对外版本一个 `## X.Y.Z` 分节；`package.json` 版本、git tag、GitHub Release 标题与该分节保持一致。
 
 - 开发期不需要逐次记录版本；提交信息写清改动即可。
 - 发布说明面向用户写功能、行为变化与修复，不写内部实现流水账。
@@ -89,7 +89,7 @@ pnpm bump:dev        # 0.3.0-dev.1 -> 0.3.0-dev.2；从 0.3.0 开始则 -> 0.3.0
 
 ## 发布流程
 
-1. 确定发布版本，把 `package.json` 从调试版 `X.Y.Z-dev.N` 改回 `X.Y.Z`。
+1. 确定发布版本，把 `package.json` 从调试版 `X.Y.Z-dev.N` 改回 `X.Y.Z`；在 `CHANGELOG.md` 写好该版本的 `## X.Y.Z` 分节。
 2. `pnpm typecheck`、`pnpm test`；确认 `describe.json` 与代码一致。
 3. 本机安装/重启 Coopanion，按面板目检；面板有改动时先 bump patch 版本。
 4. 在 Cortico 检出根跑发布检查：
@@ -100,7 +100,7 @@ pnpm bump:dev        # 0.3.0-dev.1 -> 0.3.0-dev.2；从 0.3.0 开始则 -> 0.3.0
    ```
 
 5. 提交代码、打 tag（如 `v0.2.1`）、推送 GitHub。
-6. 在 GitHub 创建对应版本的 **Release**，写发布说明（这就是本项目的“changelog”）。已装 `gh` 时可：`gh release create vX.Y.Z --title vX.Y.Z --notes-file notes.md`；否则用网页。
+6. 在 GitHub 创建对应版本的 **Release**，正文使用 `CHANGELOG.md` 中该版本的 `## X.Y.Z` 分节。已装 `gh` 时可：`gh release create vX.Y.Z --title vX.Y.Z --notes-file <分节文件>`；否则用网页。
 7. `npm publish`（官方 registry，按账号需要 2FA；如进入 staged publishing，需在 CLI 或 npmjs.com 批准）。
 8. 发布后同步国内镜像：
 

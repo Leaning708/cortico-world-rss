@@ -45,6 +45,7 @@
     }
   },
   "files": [
+    "CHANGELOG.md",
     "src",
     "dist",
     "assets",

@@ -543,7 +543,7 @@ cortico-world-rss/
 
 ### 11.3 发布
 
-本机自用，不发布。若将来发布：npm 名已核实可用；发布前在 Cortico 检出根跑 `pnpm describe:extension` + `pnpm check:extension`；每个对外版本在 GitHub Releases 写发布说明（不维护仓库内 CHANGELOG）；发不发由你决定。
+本机自用，不发布。若将来发布：npm 名已核实可用；发布前在 Cortico 检出根跑 `pnpm describe:extension` + `pnpm check:extension`；仓库根目录维护 `CHANGELOG.md`，每个对外版本的 `## X.Y.Z` 分节与 GitHub Release 正文一致；发不发由你决定。
 
 ---
 

@@ -284,7 +284,7 @@ curl "https://registry.npmmirror.com/-/package/<包名>/syncs/<id>"
 
 ### G.4 版本与发布记录（GitHub Releases）
 
-- 不强制在仓库里维护 `CHANGELOG.md`；**对外发布记录写在 GitHub Releases**，与 npm 版本、git tag 保持一致。
+- 仓库根目录维护 `CHANGELOG.md`，每个发布版本一个 `## X.Y.Z` 分节；**GitHub Release 正文使用同一分节**，与 npm 版本、git tag 保持一致。
 - 发布流程：更新版本 → 构建/测试/目检 → 提交 → 打 tag 并推送 → 在 GitHub 创建对应 Release（写用户向的功能、行为变化、修复）→ npm publish。
 - 开发期用 `X.Y.Z-dev.N` 迭代，不消耗发布版本号；发布时去掉后缀成 `X.Y.Z`。
 - 开发期不需要逐次记录版本；提交信息写清改动即可，不要为每次调试 patch 单独写发布说明。

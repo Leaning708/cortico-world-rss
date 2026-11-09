@@ -95,6 +95,7 @@ Coopanion 的 RSS / Atom 订阅扩展。把喜欢的博客、新闻和播客更�
 
 - 开发、测试与发布：[docs/development.md](docs/development.md)
 - 设计细节与完整配置：[docs/design.md](docs/design.md)
+- 更新记录：[CHANGELOG.md](CHANGELOG.md)
 - 发布记录：[GitHub Releases](https://github.com/Leaning708/cortico-world-rss/releases)
 - 问题反馈：[GitHub Issues](https://github.com/Leaning708/cortico-world-rss/issues)
 
