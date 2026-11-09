@@ -21,7 +21,7 @@ RSS_LIVE_TEST=1 npx vitest run tests/live.test.ts  # 真机集成(自起测试�
 | `src/config.ts` | 配置段接口、默认值、JSON Schema、分组(设置页字段由此而来) |
 | `src/config-save.ts` | 面板保存通道的纯校验:键白名单、数值钳制、格式校验、整单拒绝 |
 | `src/store.ts` | 订阅源表 + 条目库(dataDir 双 JSON、原子写、compact 清理、基线语义) |
-| `src/parse.ts` | RSS 2.0/Atom/RDF 归一化、去重键、实体解码、站点 feed 发现 |
+| `src/parse.ts` | RSS 2.0/Atom/RDF/JSON Feed 归一化、去重键、实体解码、站点 feed 发现 |
 | `src/fetcher.ts` | 条件请求、重定向逐跳校验、体积/超时上限、编码探测 |
 | `src/poller.ts` | 调度、退避、合批缓冲、adoptFeed(订阅首拉 + baseline) |
 | `src/extract.ts` | 文章正文抽取(rss_read full) |
@@ -39,10 +39,12 @@ RSS_LIVE_TEST=1 npx vitest run tests/live.test.ts  # 真机集成(自起测试�
 ## 改动的标准闭环
 
 ```
-改代码 → 【bump package.json patch 版本】→ pnpm test(含面板构建)→ coopanion-plugin-dev 的重启阶段 → 同一 skill 的目检阶段
+改代码 → 【面板改动: pnpm bump:dev；纯后端改动: 不 bump】→ pnpm test(含面板构建)→ 重启 → 目检
 ```
 
-**版本必须 bump**:面板产物按 `/assets/extensions/<包>/<版本>/webui.js` 以 `Cache-Control: immutable` 提供——同版本内的改动,重启进程、换源都到不了浏览器。
+**为什么**:面板产物按 `/assets/extensions/<包>/<版本>/webui.js` 以 `Cache-Control: immutable` 提供——同版本内的改动,重启进程、换源都到不了浏览器。
+
+**开发/发布版本**:开发期用 `X.Y.Z-dev.N`(由 `pnpm bump:dev` 递增),每个面板改动只推动 `-dev.N`,不消耗发布版本号;纯后端改动不 bump。发布前把版本改回 `X.Y.Z`,再打 tag、发 npm、写 GitHub Release;`-dev.N` 版本不发布、不打 tag。`package.json` 必须是合法 SemVer,不要写四段号 `X.Y.Z.N`。
 
 ## 版本与发布记录
 

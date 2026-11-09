@@ -67,6 +67,18 @@ pnpm feed-server   # http://127.0.0.1:8787
 - `/site`（站点自动发现）、`/broken.xml`、`/error/404`
 - `POST /publish {"feed":"rss","title":"新消息"}` 注入新条目
 
+## 调试版本
+
+面板产物按版本 URL 做 `immutable` 缓存，所以开发期用预发布版本换缓存键：
+
+```bash
+pnpm bump:dev        # 0.3.0-dev.1 -> 0.3.0-dev.2；从 0.3.0 开始则 -> 0.3.0-dev.1
+```
+
+- 只有面板改动需要递增；纯后端改动重启即可，不必改版本。
+- 发布前把版本改回 `X.Y.Z`（去掉 `-dev.N`）；`-dev.N` 版本不发布、不打 tag。
+- 不要用四段号 `X.Y.Z.N`（不是合法 SemVer，npm 不接受）。
+
 ## 版本与发布记录
 
 项目不在仓库内维护 `CHANGELOG` 文件。每个对外版本用 **GitHub Release** 记录变更，`package.json` 版本、git tag、Release 标题保持一致。
@@ -77,7 +89,7 @@ pnpm feed-server   # http://127.0.0.1:8787
 
 ## 发布流程
 
-1. 确定发布版本，更新 `package.json` 版本。
+1. 确定发布版本，把 `package.json` 从调试版 `X.Y.Z-dev.N` 改回 `X.Y.Z`。
 2. `pnpm typecheck`、`pnpm test`；确认 `describe.json` 与代码一致。
 3. 本机安装/重启 Coopanion，按面板目检；面板有改动时先 bump patch 版本。
 4. 在 Cortico 检出根跑发布检查：

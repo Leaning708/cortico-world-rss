@@ -144,3 +144,77 @@ describe('discoverFeedsInHtml', () => {
     expect(discoverFeedsInHtml('<html><head></head></html>', 'https://example.org/')).toEqual([]);
   });
 });
+
+const JSON_FEED = JSON.stringify({
+  version: 'https://jsonfeed.org/version/1.1',
+  title: 'JSON 测试源',
+  home_page_url: 'https://example.org/',
+  feed_url: 'https://example.org/feed.json',
+  description: 'JSON Feed 描述',
+  items: [
+    {
+      id: 'j1',
+      url: '/article/1',
+      title: 'JSON 条目一',
+      content_html: '<p>正文 <b>加粗</b></p>',
+      summary: '<p>摘要</p>',
+      date_published: '2026-11-06T08:00:00Z',
+      authors: [{ name: '作者甲' }],
+      attachments: [{ url: 'https://example.org/a.mp3', mime_type: 'audio/mpeg' }],
+    },
+    {
+      id: 'j2',
+      title: 'JSON 条目二',
+      content_text: '纯文本正文',
+      date_modified: '2026-11-05T08:00:00Z',
+    },
+  ],
+});
+
+describe('JSON Feed', () => {
+  it('解析 JSON Feed 1.1 并映射到统一结构', () => {
+    const feed = parseFeed(`\uFEFF ${JSON_FEED}`);
+    expect(feed.title).toBe('JSON 测试源');
+    expect(feed.link).toBe('https://example.org/');
+    expect(feed.description).toBe('JSON Feed 描述');
+    expect(feed.items).toHaveLength(2);
+    expect(feed.items[0]).toMatchObject({
+      uid: 'j1',
+      title: 'JSON 条目一',
+      url: 'https://example.org/article/1',
+      author: '作者甲',
+      publishedAt: '2026-11-06T08:00:00.000Z',
+      enclosure: { mime: 'audio/mpeg', url: 'https://example.org/a.mp3' },
+    });
+    expect(feed.items[0].description).toContain('正文 加粗');
+    expect(feed.items[0].contentHtml).toContain('<p>正文 <b>加粗</b></p>');
+    expect(feed.items[1]).toMatchObject({
+      uid: 'j2',
+      title: 'JSON 条目二',
+      description: '纯文本正文',
+      publishedAt: '2026-11-05T08:00:00.000Z',
+    });
+  });
+
+  it('拒绝不支持的 JSON Feed 版本', () => {
+    expect(() => parseFeed(JSON.stringify({ version: 'https://jsonfeed.org/version/2', title: 'x', items: [] })))
+      .toThrow(ParseError);
+  });
+
+  it('只有标题没有条目时仍可解析', () => {
+    const feed = parseFeed(JSON.stringify({ version: 'https://jsonfeed.org/version/1', title: '空源', items: [] }));
+    expect(feed.title).toBe('空源');
+    expect(feed.items).toEqual([]);
+  });
+
+  it('站点发现支持 JSON Feed alternate link', () => {
+    const html = `<head>
+      <link rel="alternate" type="application/feed+json" href="/feed.json">
+      <link rel="alternate" type="application/json" href="https://cdn.example.org/feed.json">
+    </head>`;
+    expect(discoverFeedsInHtml(html, 'https://example.org/')).toEqual([
+      'https://example.org/feed.json',
+      'https://cdn.example.org/feed.json',
+    ]);
+  });
+});

@@ -9,6 +9,7 @@
  *   GET  /               说明页
  *   GET  /rss.xml        RSS 2.0(UTF-8),动态条目,支持 ETag/304
  *   GET  /atom.xml       Atom(UTF-8)
+ *   GET  /feed.json      JSON Feed 1.1
  *   GET  /gbk.xml        RSS 2.0(GBK 编码,静态)——验证编码探测
  *   GET  /broken.xml     非法 XML——验证错误处理
  *   GET  /site           HTML 站点页(带 <link rel=alternate> 指向 /rss.xml)——验证自动发现
@@ -38,6 +39,11 @@ const nowIso = () => new Date().toUTCString();
 const iso = (offsetMinutes = 0) => new Date(Date.now() - offsetMinutes * 60_000).toISOString();
 
 const staticFeeds = {
+  'feed.json': {
+    items: [
+      { title: 'JSON Feed 条目一', description: '这是 /feed.json 的第一条。', at: iso(10) },
+    ],
+  },
   'rss.xml': {
     items: [
       { title: '欢迎条目:本地测试服务器已就绪', description: '这是 /rss.xml 的第一条。POST /publish 可以追加新条目测试推送。', at: iso(30) },
@@ -54,6 +60,24 @@ const GUID_BASE = { 'rss.xml': 'https://test.local/post-', 'atom.xml': 'urn:test
 
 function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function renderJsonFeed() {
+  const store = staticFeeds['feed.json'];
+  return JSON.stringify({
+    version: 'https://jsonfeed.org/version/1.1',
+    title: '本地 JSON Feed 测试源',
+    home_page_url: 'https://test.local/',
+    feed_url: 'https://test.local/feed.json',
+    description: 'Coopanion RSS 扩展的本机 JSON Feed 验收源',
+    items: [...store.items].reverse().map((item, i) => ({
+      id: `json-${store.items.length - i}`,
+      url: `https://test.local/json/${store.items.length - i}`,
+      title: item.title,
+      content_text: item.description,
+      date_published: item.at,
+    })),
+  }, null, 2);
 }
 
 function renderRss(name) {
@@ -119,7 +143,7 @@ const server = createServer((req, res) => {
         title: url.searchParams.get('title') ?? '未命名',
         description: url.searchParams.get('description') ?? '',
       };
-      const name = payload.feed === 'atom' ? 'atom.xml' : 'rss.xml';
+      const name = payload.feed === 'atom' ? 'atom.xml' : payload.feed === 'json' ? 'feed.json' : 'rss.xml';
       staticFeeds[name].items.push({
         title: payload.title,
         description: payload.description,
@@ -133,7 +157,7 @@ const server = createServer((req, res) => {
     req.on('end', () => {
       try {
         const payload = JSON.parse(raw || '{}');
-        const name = payload.feed === 'atom' ? 'atom.xml' : 'rss.xml';
+        const name = payload.feed === 'atom' ? 'atom.xml' : payload.feed === 'json' ? 'feed.json' : 'rss.xml';
         const store = staticFeeds[name];
         store.items.push({
           title: String(payload.title ?? '未命名'),
@@ -153,7 +177,7 @@ const server = createServer((req, res) => {
     req.on('end', () => {
       try {
         const payload = JSON.parse(raw || '{}');
-        const name = payload.feed === 'atom' ? 'atom.xml' : 'rss.xml';
+        const name = payload.feed === 'atom' ? 'atom.xml' : payload.feed === 'json' ? 'feed.json' : 'rss.xml';
         staticFeeds[name].items = [];
         respond(200, `cleared ${name}`);
       } catch (error) {
@@ -169,12 +193,13 @@ const server = createServer((req, res) => {
         '本地 RSS 测试服务器。可用端点:',
         '  GET /rss.xml    RSS 2.0 (UTF-8, ETag/304)',
         '  GET /atom.xml   Atom (UTF-8, ETag/304)',
+        '  GET /feed.json  JSON Feed 1.1',
         '  GET /gbk.xml    RSS 2.0 (GBK 编码)',
         '  GET /site       HTML 站点页(自动发现 /rss.xml)',
         '  GET /broken.xml 非法 XML',
         '  GET /error/404  /error/403',
         '  GET /headers    回显请求头',
-        '  POST /publish   {"feed":"rss"|"atom","title":"...","description":"..."}',
+        '  POST /publish   {"feed":"rss"|"atom"|"json","title":"...","description":"..."}',
         '  POST /clear     {"feed":"rss"}',
       ].join('\n'));
       return;
@@ -183,6 +208,9 @@ const server = createServer((req, res) => {
       return;
     case '/atom.xml':
       respondXml(renderRss('atom.xml'), JSON.stringify(staticFeeds['atom.xml'].items.map((i) => i.title)));
+      return;
+    case '/feed.json':
+      respond(200, renderJsonFeed(), { 'content-type': 'application/feed+json; charset=utf-8' });
       return;
     case '/gbk.xml': {
       const bytes = Buffer.from(GBK_BASE64, 'base64');

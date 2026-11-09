@@ -55,6 +55,9 @@ export interface ItemRecord {
   notified: boolean;
   read: boolean;
   starred: boolean;
+  /** rss_read(full) 抓取过的正文缓存;旧数据无此字段。 */
+  fullText?: string;
+  fullTextAt?: string;
 }
 
 export interface StoreLimits {
@@ -399,6 +402,26 @@ export class RssStore {
     }
     if (changed) this.dirty = true;
     return changed;
+  }
+
+  /** 写入 rss_read(full) 的正文缓存:单条截断 + 按时间淘汰最旧,避免条目库无限膨胀。 */
+  setItemFullText(key: string, text: string, now: Date): boolean {
+    const item = this.item(key);
+    const clean = text.trim();
+    if (!item || !clean) return false;
+    item.fullText = clean.slice(0, 12_000);
+    item.fullTextAt = now.toISOString();
+    this.dirty = true;
+    const cached = this.itemsData.items
+      .filter((i) => i.fullText && i.fullTextAt)
+      .sort((a, b) => (a.fullTextAt ?? '').localeCompare(b.fullTextAt ?? ''));
+    while (cached.length > 200) {
+      const old = cached.shift();
+      if (!old) break;
+      delete old.fullText;
+      delete old.fullTextAt;
+    }
+    return true;
   }
 
   markNotified(keys: readonly string[]): void {

@@ -34,6 +34,8 @@ export const ENV_PROMPT_FILE = fileURLToPath(new URL('./ENV_PROMPT.md', import.m
 const LIST_RECEIPT_CHARS = 4_000;
 const UNREAD_RECEIPT_CHARS = 8_000;
 const READ_RECEIPT_CHARS = 12_000;
+/** 全文缓存有效期:过期后重新抓取,避免长期保存已变更的正文。 */
+const FULLTEXT_TTL_MS = 7 * 24 * 3600 * 1000;
 const ACTION_RECEIPT_CHARS = 4_000;
 const ARTICLE_BYTES = 1024 * 1024;
 const UNREAD_MAX_LIMIT = 50;
@@ -220,6 +222,8 @@ export class RssWorld implements World {
   private readonly store: RssStore;
   private readonly poller: RssPoller;
   private host: WorldHost | null = null;
+  /** 预览刚发出的一小段时间内,模型调用 rss_mark 只回执不落库;面板手动标记不受影响。 */
+  private previewGuardUntil = 0;
   private readonly feedErrorLastAt = new Map<string, number>();
   private readonly optionsLog: { info(message: string): void; warn(message: string): void };
   private readonly persistCfg?: (patch: Partial<RssConfigSection>) => void;
@@ -330,7 +334,7 @@ export class RssWorld implements World {
         ? `未读里暂时没有需要播报的条目(静默源的 ${silentUnread} 条只留在收件箱)。`
         : '没有积压的未读，收件箱是干净的。';
     const parts = [
-      `RSS 晨报：过去 24 小时收到 ${fetched} 条新内容，当前未读 ${unread} 条。`,
+      `RSS晨报：过去 24 小时收到 ${fetched} 条新内容，当前未读 ${unread} 条。`,
       highlightLine,
     ];
     return parts.join('\n');
@@ -436,7 +440,7 @@ export class RssWorld implements World {
     });
     if (first.status === 304) throw new FetchFailure('http', '源返回 304，但没有可解析的内容');
     const trimmed = first.body.trimStart();
-    if (/^<\?xml|<(rss|feed|rdf:RDF)\b/i.test(trimmed.slice(0, 200))) {
+    if (trimmed.startsWith('{') || /^<\?xml|<(rss|feed|rdf:RDF)\b/i.test(trimmed.slice(0, 200))) {
       return { feedUrl: first.finalUrl, parsed: parseFeed(first.body), discovered: false };
     }
     // 站点页：发现候选 feed 链接，逐个试。
@@ -597,6 +601,9 @@ export class RssWorld implements World {
       if (feed && feed.fullText === false) {
         return `${header}\n\n这个订阅关闭了全文抓取(在订阅详情里打开),只给库内摘要:\n${clip(item.plain || '(空)', READ_RECEIPT_CHARS - header.length - 40)}`;
       }
+      if (item.fullText && item.fullTextAt && now.getTime() - new Date(item.fullTextAt).getTime() <= FULLTEXT_TTL_MS) {
+        return `${header}\n\n正文(缓存,${item.fullText.length} 字符):\n${clip(item.fullText, READ_RECEIPT_CHARS - header.length - 40)}`;
+      }
       if (!item.url || !/^https?:\/\//i.test(item.url)) {
         return `${header}\n\n这条没有可抓取的原文链接，只给库内摘要:\n${clip(item.plain || '(空)', READ_RECEIPT_CHARS - header.length - 40)}`;
       }
@@ -610,6 +617,8 @@ export class RssWorld implements World {
         });
         const { text: article } = extractArticle(page.body, READ_RECEIPT_CHARS - header.length - 200);
         if (article.length < 80) throw new Error('抽取到的正文太短');
+        this.store.setItemFullText(item.key, article, now);
+        this.store.flushNow();
         return `${header}\n\n正文(已抓原文,${article.length} 字符):\n${article}`;
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
@@ -670,6 +679,9 @@ export class RssWorld implements World {
     if (!keys && !all) return '给出要标记的条目 ids,或 all:true(可配合 feedId)。';
     if (keys && keys.length === 0) return 'ids 是空的；用 rss_unread 拿条目 id。';
     if (feedId && !this.store.feed(feedId)) return `没有 id 为 ${feedId} 的源。`;
+    if (this.now().getTime() < this.previewGuardUntil) {
+      return '当前是播报预览,不会修改已读状态;预览结束后再标记。';
+    }
     const changed = this.store.markItems({
       ...(keys ? { keys } : {}),
       ...(feedId ? { feedId } : {}),
@@ -807,6 +819,7 @@ export class RssWorld implements World {
         const query = this.store.itemsQuery({
           scope: (['unread', 'all', 'starred'] as const).find((s) => s === input.scope) ?? 'unread',
           ...(typeof input.feedId === 'string' ? { feedId: String(input.feedId) } : {}),
+          ...(typeof input.query === 'string' && input.query.trim() ? { query: input.query } : {}),
           limit: typeof input.limit === 'number' ? Math.floor(input.limit) : 50,
           ...(typeof input.offset === 'number' ? { offset: input.offset } : {}),
         });
@@ -854,6 +867,44 @@ export class RssWorld implements World {
         });
         this.store.flushNow();
         return { ok: true, changed };
+      }
+      case 'notify.preview': {
+        const input = (first ?? {}) as Record<string, unknown>;
+        const kind = input.kind === 'digest' ? 'digest' : 'live';
+        let text: string | null = null;
+        let fallback = false;
+        let total = 0;
+        let dropped = 0;
+        if (kind === 'digest') {
+          text = this.renderDigest();
+        } else {
+          const preview = this.poller.previewBatch();
+          if (preview) {
+            text = preview.text;
+            total = preview.meta.total;
+            dropped = preview.meta.dropped;
+          } else {
+            const recent = this.poller.previewRecentBatch(3);
+            text = recent?.text ?? null;
+            total = recent?.meta.total ?? 0;
+            dropped = recent?.meta.dropped ?? 0;
+            fallback = true;
+          }
+        }
+        if (!text) return { kind, sent: false, text: null, fallback, total, dropped };
+        if (!this.host) return { kind, sent: false, text, fallback, total, dropped };
+        // 预览不在面板里展示:推给 Coo,让它用 pet_say 在桌宠气泡里模拟真实播报。
+        await this.host.pushEvent({
+          type: 'rss.new_items',
+          ts: this.now().toISOString(),
+          source: RSS_ID,
+          origin: 'external',
+          senderKey: 'rss.new_items',
+          text,
+          meta: { kind, total, dropped, fallback },
+        }, { trigger: 'flush' });
+        this.previewGuardUntil = this.now().getTime() + 60_000;
+        return { kind, sent: true, text, fallback, total, dropped };
       }
       case 'opml.export':
         return { opml: exportOpml(this.store.feeds()) };

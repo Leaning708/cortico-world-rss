@@ -176,7 +176,91 @@ function normalizeItem(raw: Record<string, unknown>, kind: 'rss' | 'atom'): Pars
 }
 
 /** 解析 RSS 2.0 / Atom / RDF 三种格式;其余根元素一律 ParseError。 */
+/** JSON Feed 1.x 的字段尽量宽松地映射到与 RSS/Atom 相同的结构。 */
+function jsonString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function jsonAuthor(value: unknown): string | null {
+  if (!value || typeof value !== 'object') return null;
+  const record = value as Record<string, unknown>;
+  const name = jsonString(record.name);
+  if (name) return name;
+  const authors = Array.isArray(value) ? value : null;
+  if (authors) {
+    for (const entry of authors) {
+      const found = jsonAuthor(entry);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function resolveJsonUrl(value: string | null, base: string | null): string {
+  if (!value) return '';
+  if (!base) return value;
+  try {
+    return new URL(value, base).toString();
+  } catch {
+    return value;
+  }
+}
+
+export function parseJsonFeed(text: string): ParsedFeed {
+  let doc: unknown;
+  try {
+    doc = JSON.parse(text);
+  } catch (error) {
+    throw new ParseError(`JSON Feed 解析失败:${error instanceof Error ? error.message : String(error)}`);
+  }
+  if (!doc || typeof doc !== 'object' || Array.isArray(doc)) throw new ParseError('响应不是 JSON Feed 对象');
+  const feed = doc as Record<string, unknown>;
+  const version = jsonString(feed.version) ?? '';
+  if (!/jsonfeed\.org\/version\/1(\.\d+)?/.test(version)) {
+    throw new ParseError('不是 JSON Feed 1.x(version 字段不匹配)');
+  }
+  if (!Array.isArray(feed.items)) throw new ParseError('JSON Feed 的 items 不是数组');
+  const feedBase = jsonString(feed.home_page_url) ?? jsonString(feed.feed_url);
+  const title = stripHtml(jsonString(feed.title) ?? '');
+  const link = jsonString(feed.home_page_url) ?? jsonString(feed.feed_url);
+  const description = jsonString(feed.description) ? stripHtml(jsonString(feed.description)!) : null;
+
+  const items: ParsedItem[] = [];
+  for (const raw of feed.items) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+    const entry = raw as Record<string, unknown>;
+    const rawUrl = jsonString(entry.url) ?? jsonString(entry.external_url) ?? '';
+    const url = resolveJsonUrl(rawUrl, feedBase);
+    const contentHtml = jsonString(entry.content_html);
+    const contentText = jsonString(entry.content_text);
+    const summary = jsonString(entry.summary);
+    const descriptionText = contentText ?? (contentHtml ? stripHtml(contentHtml) : summary ? stripHtml(summary) : '');
+    const itemTitle = stripHtml(jsonString(entry.title) ?? '');
+    const uid = jsonString(entry.id) ?? url ?? hashUid(`${itemTitle}\n${descriptionText}`);
+    const authors = entry.authors;
+    const author = Array.isArray(authors) ? authors.map(jsonAuthor).find((name): name is string => !!name) ?? null : jsonAuthor(entry.author);
+    const publishedAt = parseFeedDate(jsonString(entry.date_published) ?? jsonString(entry.date_modified));
+    let enclosure: ParsedItem['enclosure'] = null;
+    if (Array.isArray(entry.attachments)) {
+      for (const attachment of entry.attachments) {
+        if (!attachment || typeof attachment !== 'object' || Array.isArray(attachment)) continue;
+        const record = attachment as Record<string, unknown>;
+        const attachmentUrl = resolveJsonUrl(jsonString(record.url), feedBase);
+        if (!attachmentUrl) continue;
+        enclosure = { mime: jsonString(record.mime_type) ?? 'application/octet-stream', url: attachmentUrl };
+        break;
+      }
+    }
+    if (!itemTitle && !descriptionText && !url) continue;
+    items.push({ uid, title: itemTitle, description: descriptionText, contentHtml, url, author, publishedAt, enclosure });
+  }
+  if (!title && items.length === 0) throw new ParseError('JSON Feed 里既没有标题也没有条目');
+  return { title, link, description, items };
+}
+
 export function parseFeed(xml: string): ParsedFeed {
+  const trimmed = xml.replace(/^\uFEFF/, '').trim();
+  if (trimmed.startsWith('{')) return parseJsonFeed(trimmed);
   let doc: Record<string, unknown>;
   try {
     doc = parser.parse(xml) as Record<string, unknown>;
@@ -232,7 +316,8 @@ export function discoverFeedsInHtml(html: string, baseUrl: string): string[] {
     const href = /href\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1] ?? '';
     if (!href) continue;
     if (!rel.split(/\s+/).includes('alternate')) continue;
-    if (!/(application\/(rss|atom)\+xml|application\/feed\+xml)/.test(type)) continue;
+    const feedJson = type === 'application/feed+json' || (type === 'application/json' && /\.json(?:[?#]|$)/i.test(href));
+    if (!feedJson && !/(application\/(rss|atom)\+xml|application\/feed\+xml)/.test(type)) continue;
     try {
       const resolved = new URL(href, baseUrl).toString();
       if (!out.includes(resolved)) out.push(resolved);

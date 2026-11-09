@@ -129,6 +129,38 @@ export class RssPoller {
     return this.buffer.length;
   }
 
+  /** 预览当前缓冲会生成的实时播报;只读,不消费缓冲。 */
+  previewBatch(): BatchEvent | null {
+    return this.buildBatch(this.buffer);
+  }
+
+  /** 缓冲为空时的预览样例:取最近 N 条可播报源条目,按同样规则组包。 */
+  previewRecentBatch(limit = 3): BatchEvent | null {
+    const feeds = this.deps.store.feeds().filter((feed) => feed.notify === 'notify');
+    if (feeds.length === 0) return null;
+    const byId = new Map(feeds.map((feed) => [feed.id, feed]));
+    const { items } = this.deps.store.itemsQuery({
+      scope: 'all',
+      feedIds: feeds.map((feed) => feed.id),
+      limit: Math.max(1, limit),
+    });
+    if (items.length === 0) return null;
+    const now = this.now();
+    const entries: BufferedEntry[] = [];
+    for (const item of items) {
+      const feed = byId.get(item.feedId);
+      if (!feed) continue;
+      entries.push({
+        feedId: feed.id,
+        feedTitle: feed.title,
+        item,
+        score: scoreItem(feed, item, now),
+        enqueuedAt: now.getTime(),
+      });
+    }
+    return this.buildBatch(entries);
+  }
+
   /** 排下一次 tick:取最近的截止时刻,至多看 30s 远,保证配置热改能被看到。 */
   private scheduleNext(): void {
     if (!this.running) return;
@@ -311,13 +343,13 @@ export class RssPoller {
     if (this.now().getTime() - oldest >= windowMs) this.flushBatch();
   }
 
-  /** 组一条事件:按分排序 → 截 maxHeadlines → 机械压缩;装不下的留在缓冲,下批再来。 */
-  flushBatch(): void {
-    if (this.buffer.length === 0) return;
+  /** 组一条事件:按分排序 → 截 maxHeadlines → 机械压缩;不修改缓冲。 */
+  private buildBatch(entries: readonly BufferedEntry[]): BatchEvent | null {
+    if (entries.length === 0) return null;
     const cfg = this.deps.cfg;
     const maxHeadlines = Math.max(1, Math.floor(cfg.eventMaxHeadlines));
     const maxChars = Math.max(400, Math.floor(cfg.eventMaxChars));
-    const ordered = [...this.buffer].sort((a, b) =>
+    const ordered = [...entries].sort((a, b) =>
       (b.score - a.score)
       || b.item.publishedAt.localeCompare(a.item.publishedAt));
     const shown: BufferedEntry[] = [];
@@ -332,24 +364,31 @@ export class RssPoller {
       used += line.length;
       shown.push(entry);
     }
-    if (shown.length === 0) return;
+    if (shown.length === 0) return null;
     const dropped = ordered.length - shown.length;
-    const shownKeys = shown.map((entry) => entry.item.key);
-    const shownKeySet = new Set(shownKeys);
-    for (let i = this.buffer.length - 1; i >= 0; i--) {
-      if (shownKeySet.has(this.buffer[i].item.key)) this.buffer.splice(i, 1);
-    }
     const text = `RSS ${shown.length} 条新内容${dropped > 0 ? `(另有 ${dropped} 条未展开)` : ''}:\n`
       + lines.map((line, i) => `${CIRCLED[i] ?? '·'} ${line}`).join('\n');
-    this.deps.onBatch?.({
+    return {
       text,
       meta: {
         feedIds: [...new Set(shown.map((entry) => entry.feedId))],
-        itemKeys: shownKeys,
+        itemKeys: shown.map((entry) => entry.item.key),
         total: ordered.length,
         dropped,
       },
-    });
+    };
+  }
+
+  /** 组包并消费当前缓冲;真正推送走这里。 */
+  flushBatch(): void {
+    if (this.buffer.length === 0) return;
+    const batch = this.buildBatch(this.buffer);
+    if (!batch) return;
+    const shownKeySet = new Set(batch.meta.itemKeys);
+    for (let i = this.buffer.length - 1; i >= 0; i--) {
+      if (shownKeySet.has(this.buffer[i].item.key)) this.buffer.splice(i, 1);
+    }
+    this.deps.onBatch?.(batch);
   }
 
   private maybeFireDigest(): void {

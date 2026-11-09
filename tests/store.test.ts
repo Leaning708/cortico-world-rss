@@ -214,3 +214,28 @@ describe('RssStore', () => {
     expect(feed.seenKeys.length).toBeLessThanOrEqual(500);
   });
 });
+
+describe('全文缓存', () => {
+  it('写入、截断、按时间淘汰最旧,并可持久化', () => {
+    const { store, dir } = makeStore();
+    const feed = store.createFeed({ url: 'https://a.com/feed', title: 'A' });
+    const items = Array.from({ length: 205 }, (_, i) => parsedItem(`cache-${i}`));
+    store.addItems(feed, items, new Date('2026-11-06T09:00:00Z'));
+    const keys = store.itemsQuery({ scope: 'all', limit: 1000 }).items.map((item) => item.key);
+    expect(keys).toHaveLength(205);
+    for (const [index, key] of keys.entries()) {
+      store.setItemFullText(key, `正文${index}`, new Date(Date.UTC(2026, 10, 6, 9, 0, index)));
+    }
+    const cached = store.itemsQuery({ scope: 'all', limit: 1000 }).items.filter((item) => item.fullText);
+    expect(cached).toHaveLength(200);
+    // 205 条只保留最近 200 条,最早的 5 条被淘汰。
+    expect(store.item(keys[4])?.fullText).toBeUndefined();
+    expect(store.item(keys[5])?.fullText).toBeDefined();
+    // 单条上限。
+    store.setItemFullText(keys[5], 'x'.repeat(20_000), new Date());
+    expect(store.item(keys[5])?.fullText).toHaveLength(12_000);
+    store.flushNow();
+    const reloaded = new RssStore(dir);
+    expect(reloaded.item(keys[5])?.fullText).toHaveLength(12_000);
+  });
+});

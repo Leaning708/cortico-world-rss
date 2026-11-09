@@ -26,7 +26,7 @@ Coopanion 用 [Cortico](https://github.com/Pal-AI-Lab/Cortico) 框架组装；�
 
 ## 0. 三条铁律（先记这三条，再往下读）
 
-1. **每次改动都 bump `package.json` 的 patch 版本**。面板产物按 `/assets/extensions/<包>/<版本>/webui.js` 以 `Cache-Control: public, max-age=31536000, immutable` 提供——同一版本号内的任何改动，重启进程、换源都到不了浏览器。bump 后按发布节奏在 GitHub Releases 写该版本的发布说明（仓库不强制维护 CHANGELOG）。
+1. **面板改动只 bump 开发预发布位，发布时才去掉后缀**。面板产物按 `/assets/extensions/<包>/<版本>/webui.js` 以 `Cache-Control: public, max-age=31536000, immutable` 提供——同一版本号内的任何改动，重启进程、换源都到不了浏览器。开发期用 `X.Y.Z-dev.N`（可用 `pnpm bump:dev` 递增），纯后端改动不必 bump；发布时改回 `X.Y.Z`、打同名 tag、写 GitHub Release。禁止四段号 `X.Y.Z.N`（不是合法 SemVer）。
 2. **构建产物随包提交，`link:` 本机扩展必须重启进程才生效**：`describe.json`、`dist/webui.js` 是提交进包的文件；改代码后不重启 Coopanion，扩展还是旧代码。
 3. **测试不碰真实网络，"测试全绿"必须真跑过**：外部行为通过注入的 `fetchImpl` / `createSocket` / `resolve` 模拟；不为了让测试变绿而删断言或跳过用例。
 
@@ -241,7 +241,7 @@ bash .agents/skills/coopanion-plugin-dev/scripts/find-webui-port.sh
    资源 URL 从页面 `performance.getEntriesByType("resource")` 里读，别猜。
 
 2. 服务器是新的、浏览器还是旧的 → **换源绕缓存**：`localhost` 与 `127.0.0.1` 是不同源、HTTP 缓存互相隔离，开新标签走 `http://localhost:<port>/#/...` 即可。
-3. **服务器也是旧的 → 升 patch 版本再重启**。immutable 缓存按"版本 URL"钉死内容：同一个版本号内的后续改动，重启进程、换源都救不回来（桌面端 webview 与受控浏览器一样）。开发迭代的正确姿势是**每次改面板就 bump `package.json` 的 patch 版本**——版本 URL 变了，所有缓存自然失效。改完再确认新版本 URL 返回 200 且含新代码标记。
+3. **服务器也是旧的 → 升开发预发布位再重启**。immutable 缓存按"版本 URL"钉死内容：同一个版本号内的后续改动，重启进程、换源都救不回来（桌面端 webview 与受控浏览器一样）。开发迭代的正确姿势是**每次改面板就用 `pnpm bump:dev` 递增 `X.Y.Z-dev.N`**——版本 URL 变了，所有缓存自然失效；发布时改回 `X.Y.Z`。改完再确认新版本 URL 返回 200 且含新代码标记。
 4. 在页面里核实脚本真身：`styleAttr`/`getComputedStyle` 看元素是否带上了新样式（截图看不出来时用这招）；检查脚本 URL 是否还是旧版本号。
 
 ### F.5 收尾
@@ -286,6 +286,7 @@ curl "https://registry.npmmirror.com/-/package/<包名>/syncs/<id>"
 
 - 不强制在仓库里维护 `CHANGELOG.md`；**对外发布记录写在 GitHub Releases**，与 npm 版本、git tag 保持一致。
 - 发布流程：更新版本 → 构建/测试/目检 → 提交 → 打 tag 并推送 → 在 GitHub 创建对应 Release（写用户向的功能、行为变化、修复）→ npm publish。
+- 开发期用 `X.Y.Z-dev.N` 迭代，不消耗发布版本号；发布时去掉后缀成 `X.Y.Z`。
 - 开发期不需要逐次记录版本；提交信息写清改动即可，不要为每次调试 patch 单独写发布说明。
 - 发布说明面向用户，不写内部实现流水账；实现细节放设计文档或提交信息。
 

@@ -150,18 +150,32 @@ function mountInbox(ctx: WebUiPanelContext): void {
   let lastTotal = 0;
 
   const bar = ctx.ui.rowbar();
-  const scopeSeg = ctx.ui.segmented(
-    [
-      { value: 'unread', label: '未读' },
-      { value: 'all', label: '全部' },
-      { value: 'starred', label: '星标' },
-    ],
-    { value: 'unread', size: 'sm', onSelect: () => { page = 0; void refresh(); } },
+  const scopeSelect = ctx.ui.select();
+  scopeSelect.append(
+    new Option(t.scopeUnread, 'unread'),
+    new Option(t.scopeAll, 'all'),
+    new Option(t.scopeStarred, 'starred'),
   );
+  scopeSelect.value = 'unread';
+  scopeSelect.style.width = '86px';
+  scopeSelect.addEventListener('change', () => { page = 0; void refresh(); });
   // 源过滤:选项随 feeds.list 刷新,保留当前选择。
   const feedSelect = ctx.ui.select();
   feedSelect.appendChild(new Option(t.allFeeds, ''));
   feedSelect.addEventListener('change', () => { page = 0; void refresh(); });
+  const searchInput = ctx.ui.input({ type: 'search', placeholder: t.inboxSearchPlaceholder });
+  searchInput.style.width = '220px';
+  let query = '';
+  let searchTimer: ReturnType<typeof setTimeout> | null = null;
+  searchInput.addEventListener('input', () => {
+    if (searchTimer != null) clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      searchTimer = null;
+      query = searchInput.value.trim();
+      page = 0;
+      void refresh();
+    }, 250);
+  });
   const markReadBtn = ctx.ui.button(t.markRead, { size: 'sm', onClick: () => void locked(() => mark('read')) });
   const starBtn = ctx.ui.button(t.star, { size: 'sm', onClick: () => void locked(() => mark('starred')) });
   const markAllBtn = ctx.ui.button(t.markAllRead, {
@@ -195,7 +209,7 @@ function mountInbox(ctx: WebUiPanelContext): void {
         await refresh();
         return;
       }
-      const scope = scopeSeg.value || 'unread';
+      const scope = scopeSelect.value || 'unread';
       const feedId = feedSelect.value || undefined;
       const probe = await ctx.invoke<{ total: number }>('items.list', [{
         scope,
@@ -221,8 +235,13 @@ function mountInbox(ctx: WebUiPanelContext): void {
       await refresh();
     }),
   });
-  // 左边是范围与源筛选,右边是批量操作:加 grow 占位隔开,避免被读成一排选项卡。
-  bar.append(scopeSeg.el, feedSelect, ctx.ui.h('div', 'grow'), markReadBtn, starBtn, markAllBtn, clearBtn);
+  // 左边是范围、搜索与源筛选,右边是批量操作:加 grow 占位隔开,避免被读成一排选项卡。
+  const actionBar = ctx.ui.h('div', null);
+  actionBar.style.display = 'flex';
+  actionBar.style.alignItems = 'center';
+  actionBar.style.gap = '2px';
+  actionBar.append(markReadBtn, starBtn, markAllBtn, clearBtn);
+  bar.append(scopeSelect, searchInput, feedSelect, ctx.ui.h('div', 'grow'), actionBar);
   sheet.body.appendChild(bar);
   const table = ctx.ui.table({ head: ['', t.colTitle, t.colFeed, t.colTime] });
   // 勾选变化时刷新「清空条目/删除已选」按钮文字(勾选框在 renderItems 里逐个挂 change 监听)。
@@ -293,7 +312,7 @@ function mountInbox(ctx: WebUiPanelContext): void {
       td.style.textAlign = 'center';
       td.style.verticalAlign = 'middle';
       td.style.color = 'var(--muted-foreground)';
-      td.textContent = t.emptyInbox;
+      td.textContent = query ? t.inboxNoMatches : t.emptyInbox;
       tr.appendChild(td);
       table.body.appendChild(tr);
       return;
@@ -319,9 +338,12 @@ function mountInbox(ctx: WebUiPanelContext): void {
     updateClearLabel();
   }
 
+  let refreshGeneration = 0;
   const refresh = async (): Promise<void> => {
+    const generation = ++refreshGeneration;
     try {
       const overview = await ctx.invoke<Overview>('overview');
+      if (generation !== refreshGeneration) return;
       rulesLine.textContent = t.inboxDesc(
         overview.limits.retentionDays,
         overview.limits.maxItemsTotal,
@@ -329,6 +351,7 @@ function mountInbox(ctx: WebUiPanelContext): void {
       );
       // 源过滤选项:随 feeds.list 刷新,保留当前选择。
       const feeds = await ctx.invoke<FeedRow[]>('feeds.list');
+      if (generation !== refreshGeneration) return;
       const selected = feedSelect.value;
       feedSelect.replaceChildren(new Option(t.allFeeds, ''));
       for (const feed of feeds) feedSelect.appendChild(new Option(feed.title, feed.id));
@@ -336,12 +359,15 @@ function mountInbox(ctx: WebUiPanelContext): void {
       if (feedSelect.value !== selected) feedSelect.value = '';
 
       // 整库取回(≤2000 条),分页与"≤10 页整表直出"都在客户端切片。
-      renderItems(await ctx.invoke<{ total: number; items: ItemRow[] }>('items.list', [{
-        scope: scopeSeg.value || 'unread',
+      const payload = await ctx.invoke<{ total: number; items: ItemRow[] }>('items.list', [{
+        scope: scopeSelect.value || 'unread',
         ...(feedSelect.value ? { feedId: feedSelect.value } : {}),
+        ...(query ? { query } : {}),
         limit: 5000,
         offset: 0,
-      }]));
+      }]);
+      if (generation !== refreshGeneration) return;
+      renderItems(payload);
     } catch (error) {
       show(`${t.loadError}: ${errorText(error)}`, true);
     }
@@ -552,7 +578,9 @@ function mountFeeds(ctx: WebUiPanelContext): void {
     const body = ctx.ui.h('div', null);
     const urlInput = ctx.ui.input({ placeholder: t.feedUrlPlaceholder, cls: 'mono' });
     // label 以 * 结尾:宿主 field() 自动渲染红色必填标记(required-mark)。
-    body.appendChild(ctx.ui.field(`${t.feedUrlLabel} *`, urlInput));
+    const urlField = ctx.ui.field(`${t.feedUrlLabel} *`, urlInput);
+    urlField.querySelector('.fieldlabel')?.appendChild(fieldHintMark(ctx, t.feedUrlHint));
+    body.appendChild(urlField);
     const form = buildFormFields(body);
     const testLine = ctx.ui.msgline();
 
@@ -901,6 +929,7 @@ function mountConfigForm(
   ctx: WebUiPanelContext,
   sheets: Array<{ title: string; desc?: string; fields: FieldSpec[] }>,
   onSaved: (restartRequired: boolean) => void,
+  renderExtra?: (root: HTMLElement) => void,
 ): void {
   const t = text(ctx.language);
   const message = ctx.ui.msgline();
@@ -956,6 +985,16 @@ function mountConfigForm(
     ctx.root.appendChild(sheet.el);
   }
 
+  renderExtra?.(ctx.root);
+
+  // 预览卡片与保存栏之间用分割线收束,避免大片空白。
+  if (renderExtra) {
+    const divider = ctx.ui.h('div', null);
+    divider.style.borderTop = '1px solid var(--line)';
+    divider.style.margin = '18px 0 4px';
+    ctx.root.appendChild(divider);
+  }
+
   const saveBtn = ctx.ui.button(t.saveConfig, {
     variant: 'primary',
     onClick: () => void locked(async () => {
@@ -967,6 +1006,7 @@ function mountConfigForm(
     }),
   });
   const saveBar = ctx.ui.rowbar();
+  if (renderExtra) saveBar.style.marginTop = '12px';
   saveBar.appendChild(saveBtn);
   ctx.root.appendChild(saveBar);
   ctx.root.appendChild(message);
@@ -993,6 +1033,51 @@ function mountConfigForm(
   })();
 }
 
+/** 播报预览卡片:把预览文本推给 Coo,由它在桌宠气泡里模拟真实播报。 */
+function mountPreview(ctx: WebUiPanelContext, root: HTMLElement): void {
+  const t = text(ctx.language);
+  const sheet = ctx.ui.sheet({ title: t.previewTitle, desc: t.previewDesc });
+  const bar = ctx.ui.rowbar();
+  const output = ctx.ui.h('pre', null);
+  output.textContent = t.previewHint;
+  output.setAttribute('aria-live', 'polite');
+  output.style.whiteSpace = 'pre-wrap';
+  output.style.wordBreak = 'break-word';
+  output.style.margin = '0';
+  output.style.minHeight = '72px';
+  output.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, monospace';
+  output.style.fontSize = '0.9em';
+  const status = ctx.ui.msgline();
+
+  let busy = false;
+  const run = async (kind: 'live' | 'digest'): Promise<void> => {
+    if (busy) return;
+    busy = true;
+    const lock = ctx.ui.disable(liveBtn, digestBtn);
+    try {
+      const result = await ctx.invoke<{ sent: boolean; text: string | null; fallback?: boolean }>('notify.preview', [{ kind }]);
+      output.textContent = result.text ?? (kind === 'digest' ? t.previewEmptyDigest : t.previewEmptyLive);
+      if (!result.text) {
+        status.textContent = kind === 'digest' ? t.previewEmptyDigest : t.previewEmptyLive;
+      } else if (!result.sent) {
+        status.textContent = t.previewNotSent;
+      } else {
+        status.textContent = result.fallback ? t.previewSentFallback : t.previewSent;
+      }
+    } catch (error) {
+      status.textContent = `${t.failed}: ${errorText(error)}`;
+    } finally {
+      lock.dispose();
+      busy = false;
+    }
+  };
+  const liveBtn = ctx.ui.button(t.previewLive, { size: 'sm', onClick: () => void run('live') });
+  const digestBtn = ctx.ui.button(t.previewDigest, { size: 'sm', onClick: () => void run('digest') });
+  bar.append(liveBtn, digestBtn);
+  sheet.body.append(bar, output, status);
+  root.appendChild(sheet.el);
+}
+
 /** 通知标签:打扰时机 + 合批与关键词。 */
 function mountNotify(ctx: WebUiPanelContext): void {
   const t = text(ctx.language);
@@ -1015,7 +1100,7 @@ function mountNotify(ctx: WebUiPanelContext): void {
         { key: 'eventMaxChars', label: t.eventMaxCharsTitle, kind: 'number' },
       ],
     },
-  ], () => {});
+  ], () => {}, (root) => mountPreview(ctx, root));
 }
 
 /** 设置标签:轮询与网络 + 阅读与数据。 */

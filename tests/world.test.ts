@@ -261,7 +261,7 @@ describe('事件链路', () => {
     expect(host.deferred).toHaveLength(1);
     expect(host.deferred[0].spec.type).toBe('rss.daily_digest');
     const rendered = host.renderDeferred()[0];
-    expect(rendered).toContain('RSS 晨报');
+    expect(rendered).toContain('RSS晨报');
     expect(rendered).toContain('晨报条目');
     await world.stop();
   });
@@ -457,3 +457,121 @@ describe('面板数据面', () => {
 function exportFixture(original: string): string {
   return original.replace('面板源', '面板源');
 }
+
+describe('0.3.0 面板与读取增强', () => {
+  it('items.list 支持 query 过滤', async () => {
+    const env = makeWorld({}, () => response(RSS([['q1', '关键词条目'], ['q2', '其他条目']], '查询源')));
+    const host = await mounted(env.world);
+    await env.tools.rss_add({ url: 'https://example.org/feed.xml' });
+    const ui = env.world.webUi?.('zh');
+    const all = await ui?.invoke?.('manage', 'items.list', [{ scope: 'all' }]) as { total: number };
+    const filtered = await ui?.invoke?.('manage', 'items.list', [{ scope: 'all', query: '关键词' }]) as { total: number; items: Array<{ title: string }> };
+    expect(all.total).toBe(2);
+    expect(filtered.total).toBe(1);
+    expect(filtered.items[0]?.title).toBe('关键词条目');
+    await env.world.stop();
+    void host;
+  });
+
+  it('rss_read(full) 缓存正文:第二次不抓取,过期后重新抓取', async () => {
+    let articleFetches = 0;
+    const ARTICLE = `<html><body><article><h1>标题</h1>${'<p>这是一段足够长的正文内容，用来验证全文缓存是否生效。</p>'.repeat(10)}</article></body></html>`;
+    const env = makeWorld({}, (url) => {
+      if (String(url).includes('x.org/f1')) {
+        articleFetches += 1;
+        return response(ARTICLE);
+      }
+      return response(RSS([['f1', '缓存条目']], '缓存源'));
+    });
+    const host = await mounted(env.world);
+    await env.tools.rss_add({ url: 'https://example.org/feed.xml' });
+    const store = (env.world as unknown as { store: import('../src/store.ts').RssStore }).store;
+    const key = `${store.feeds()[0].id}:f1`;
+
+    const first = await env.tools.rss_read({ id: key, full: true });
+    expect(first).toContain('正文(已抓原文');
+    expect(articleFetches).toBe(1);
+    expect(store.item(key)?.fullText).toContain('正文内容');
+    const second = await env.tools.rss_read({ id: key, full: true });
+    expect(second).toContain('正文(缓存');
+    expect(articleFetches).toBe(1);
+
+    // 把缓存时间改到 8 天前,应当重新抓取。
+    const item = store.item(key)!;
+    item.fullTextAt = new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString();
+    const third = await env.tools.rss_read({ id: key, full: true });
+    expect(third).toContain('正文(已抓原文');
+    expect(articleFetches).toBe(2);
+    await env.world.stop();
+    void host;
+  });
+
+  it('notify.preview 实时预览不消费缓冲,晨报预览不新增 deferred', async () => {
+    let items: Array<[string, string]> = [['p0', '历史条目']];
+    const env = makeWorld({}, () => response(RSS(items, '预览源')));
+    const host = await mounted(env.world);
+    await env.tools.rss_add({ url: 'https://example.org/feed.xml' });
+    const store = (env.world as unknown as { store: import('../src/store.ts').RssStore }).store;
+    items = [['p1', '预览条目']];
+    const poller = (env.world as unknown as {
+      poller: {
+        pollFeed(feed: unknown, opts?: unknown): Promise<unknown>;
+        pendingBatchSize(): number;
+        flushBatch(): void;
+      };
+    }).poller;
+    await poller.pollFeed(store.feeds()[0], { silentError: true });
+    expect(poller.pendingBatchSize()).toBe(1);
+    expect(host.events).toHaveLength(0);
+
+    const ui = env.world.webUi?.('zh');
+    const live = await ui?.invoke?.('manage', 'notify.preview', [{ kind: 'live' }]) as { sent: boolean; text: string | null; fallback?: boolean };
+    expect(live.sent).toBe(true);
+    expect(live.text).toContain('预览条目');
+    expect(poller.pendingBatchSize()).toBe(1);
+    // 预览以一条 rss.new_items 草稿交给 Coo(模拟真实播报),不消费缓冲、不标已读。
+    expect(host.events).toHaveLength(1);
+    expect(host.events[0]?.type).toBe('rss.new_items');
+    expect(store.itemsQuery({ scope: 'all' }).items.find((item) => item.uid === 'p1')?.notified).toBe(false);
+    // 预览期间模型即使尝试标记也只回执,不落库。
+    const guarded = await env.tools.rss_mark({ status: 'read', all: true });
+    expect(receiptText(guarded)).toContain('预览');
+    expect(store.itemsQuery({ scope: 'all' }).items.find((item) => item.uid === 'p1')?.read).toBe(false);
+
+    poller.flushBatch();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(host.events.filter((event) => event.type === 'rss.new_items')).toHaveLength(2);
+
+    (env.world as unknown as { deliverDigest(): void }).deliverDigest();
+    expect(host.deferred).toHaveLength(1);
+    const digest = await ui?.invoke?.('manage', 'notify.preview', [{ kind: 'digest' }]) as { sent: boolean; text: string | null };
+    expect(digest.text).toContain('RSS晨报');
+    expect(digest.sent).toBe(true);
+    expect(host.deferred).toHaveLength(1);
+
+    // 缓冲已清空:实时预览回退到最近 3 条讯息。
+    const fallback = await ui?.invoke?.('manage', 'notify.preview', [{ kind: 'live' }]) as { sent: boolean; text: string | null; fallback?: boolean };
+    expect(fallback.fallback).toBe(true);
+    expect(fallback.sent).toBe(true);
+    expect(fallback.text).toContain('预览条目');
+    await env.world.stop();
+  });
+});
+
+describe('JSON Feed 订阅', () => {
+  it('feeds.test 与 feeds.add 接受 JSON Feed', async () => {
+    const JSON_FEED = JSON.stringify({
+      version: 'https://jsonfeed.org/version/1.1',
+      title: 'JSON 源',
+      items: [{ id: 'j1', url: 'https://example.org/j1', title: 'JSON 条目', content_text: '摘要' }],
+    });
+    const env = makeWorld({}, () => response(JSON_FEED, { 'content-type': 'application/feed+json' }));
+    const ui = env.world.webUi?.('zh');
+    const test = await ui?.invoke?.('manage', 'feeds.test', [{ url: 'https://example.org/feed.json' }]) as { title: string; total: number };
+    expect(test.title).toBe('JSON 源');
+    expect(test.total).toBe(1);
+    const added = await env.tools.rss_add({ url: 'https://example.org/feed.json' });
+    expect(receiptText(added)).toContain('已订阅');
+    await env.world.stop();
+  });
+});

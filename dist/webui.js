@@ -64,6 +64,19 @@ var zh = {
   sheetDisturbTitle: "\u901A\u77E5\u884C\u4E3A",
   sheetDisturbDesc: "\u6BCF\u65E5\u6668\u62A5\u3001\u542F\u52A8\u64AD\u62A5\u4E0E\u63A8\u9001\u540E\u7684\u5DF2\u8BFB\u5904\u7406\u3002",
   sheetBatchTitle: "\u6D88\u606F\u5408\u6279",
+  previewTitle: "\u64AD\u62A5\u9884\u89C8",
+  previewDesc: "\u5728\u684C\u5BA0\u6C14\u6CE1\u91CC\u6A21\u62DF\u771F\u5B9E\u64AD\u62A5;\u4F1A\u89E6\u53D1\u4E00\u6B21 Coo \u56DE\u590D,\u91CD\u590D\u5185\u5BB9 Coo \u53EF\u80FD\u62D2\u7EDD\u590D\u8BFB,\u4E0D\u4F1A\u6D88\u8D39\u5F85\u64AD\u62A5\u5185\u5BB9\u3002",
+  previewLive: "\u9884\u89C8\u5B9E\u65F6\u64AD\u62A5",
+  scopeUnread: "\u672A\u8BFB",
+  scopeAll: "\u5168\u90E8",
+  scopeStarred: "\u661F\u6807",
+  previewDigest: "\u9884\u89C8\u6668\u62A5",
+  previewHint: "\u70B9\u51FB\u6309\u94AE\u67E5\u770B\u9884\u89C8\u3002",
+  previewEmptyLive: "\u5F53\u524D\u6CA1\u6709\u5F85\u64AD\u62A5\u5185\u5BB9(\u65B0\u6761\u76EE\u8FDB\u5165\u5408\u5E76\u7A97\u53E3\u540E\u518D\u8BD5)\u3002",
+  previewSent: "\u5DF2\u53D1\u9001\u5230\u684C\u5BA0,\u7A0D\u5019 Coo \u4F1A\u5728\u6C14\u6CE1\u91CC\u64AD\u62A5\u3002",
+  previewSentFallback: "\u7F13\u51B2\u4E3A\u7A7A,\u5DF2\u7528\u6700\u8FD1 3 \u6761\u8BAF\u606F\u6A21\u62DF\u5E76\u53D1\u9001\u5230\u684C\u5BA0\u3002",
+  previewNotSent: "\u9884\u89C8\u5DF2\u751F\u6210,\u4F46\u5F53\u524D\u6CA1\u6709\u53EF\u7528\u7684 Coo \u4F1A\u8BDD;\u7A0D\u540E\u91CD\u8BD5\u3002",
+  previewEmptyDigest: "\u5F53\u524D\u6CA1\u6709\u53EF\u751F\u6210\u7684\u6668\u62A5\u5185\u5BB9\u3002",
   statsTitle: "\u6982\u89C8",
   statFeeds: "\u8BA2\u9605\u6E90",
   statUnread: "\u672A\u8BFB",
@@ -113,8 +126,9 @@ var zh = {
   inboxSheetDesc: "Coo \u64AD\u62A5\u8FC7\u4F46\u672A\u8BFB\u7684\u6761\u76EE\u90FD\u5728\u8FD9\u91CC\uFF1B\u52FE\u9009\u540E\u6279\u91CF\u6807\u8BB0\u3002",
   opmlSheetTitle: "OPML \u4E92\u901A",
   opmlSheetDesc: "\u5BFC\u51FA\u5F53\u524D\u8BA2\u9605\uFF0C\u6216\u4ECE\u5176\u5B83\u9605\u8BFB\u5668\u5BFC\u5165\u3002",
-  feedUrlLabel: "RSS \u8BA2\u9605\u5730\u5740",
+  feedUrlLabel: "\u8BA2\u9605\u5730\u5740",
   feedUrlPlaceholder: "https://example.com/feed.rss",
+  feedUrlHint: "\u652F\u6301 RSS 2.0\u3001Atom\u3001RDF (RSS 1.0) \u4E0E JSON Feed 1.0/1.1\u3002",
   addTest: "\u6D4B\u8BD5\u89E3\u6790",
   addSave: "\u8BA2\u9605",
   feedsTitle: "\u8BA2\u9605\u6E90",
@@ -133,6 +147,8 @@ var zh = {
   removeConfirm: (title) => `\u9000\u8BA2\u300C${title}\u300D\uFF1F\uFF1F\u5176\u5386\u53F2\u6761\u76EE\u5C06\u4E00\u5E76\u5220\u9664\uFF0C\u4E0D\u518D\u4FDD\u7559\u3002`,
   emptyFeeds: "\u8FD8\u6CA1\u6709\u8BA2\u9605\u6E90\u3002\u7C98\u8D34\u4E00\u4E2A\u7AD9\u70B9\u6216 RSS \u5730\u5740\u8BD5\u8BD5\u3002",
   emptyInbox: "\u6536\u4EF6\u7BB1\u662F\u7A7A\u7684\u3002",
+  inboxSearchPlaceholder: "\u641C\u7D22\u6807\u9898\u6216\u6458\u8981",
+  inboxNoMatches: "\u6CA1\u6709\u5339\u914D\u7684\u6761\u76EE\u3002",
   unreadBadge: (n) => `\u672A\u8BFB ${n}`,
   pausedBadge: "\u5DF2\u6682\u505C",
   errorBadge: (s) => `\u5F02\u5E38:${s}`,
@@ -240,6 +256,19 @@ var en = {
   sheetDisturbTitle: "Notification behavior",
   sheetDisturbDesc: "Daily digest, startup announcement and read handling after delivery.",
   sheetBatchTitle: "Message batching",
+  previewTitle: "Broadcast preview",
+  previewDesc: "Simulates a real announcement in the desktop pet bubble; triggers one Coo reply. Coo may refuse to repeat content it has already said. Pending items are not consumed.",
+  previewLive: "Preview live broadcast",
+  scopeUnread: "Unread",
+  scopeAll: "All",
+  scopeStarred: "Starred",
+  previewDigest: "Preview digest",
+  previewHint: "Click a button to preview.",
+  previewEmptyLive: "Nothing is waiting to be broadcast right now.",
+  previewSent: "Sent to the desktop pet; Coo will speak it in the bubble shortly.",
+  previewSentFallback: "The buffer was empty; the 3 most recent items were simulated and sent to the desktop pet.",
+  previewNotSent: "The preview was generated, but no Coo session is available right now; try again later.",
+  previewEmptyDigest: "No digest content is available right now.",
   statsTitle: "Overview",
   statFeeds: "Feeds",
   statUnread: "Unread",
@@ -289,8 +318,9 @@ var en = {
   inboxSheetDesc: "Everything Coo announced but you have not read; select and mark in bulk.",
   opmlSheetTitle: "OPML",
   opmlSheetDesc: "Export current subscriptions or import from another reader.",
-  feedUrlLabel: "RSS feed URL",
+  feedUrlLabel: "Feed URL",
   feedUrlPlaceholder: "https://example.com/feed.rss",
+  feedUrlHint: "Supports RSS 2.0, Atom, RDF (RSS 1.0) and JSON Feed 1.0/1.1.",
   addTest: "Test parse",
   addSave: "Subscribe",
   feedsTitle: "Feeds",
@@ -309,6 +339,8 @@ var en = {
   removeConfirm: (title) => `Unsubscribe "${title}"? Its stored items will be deleted as well.`,
   emptyFeeds: "No feeds yet. Paste a site or RSS URL to try.",
   emptyInbox: "The inbox is empty.",
+  inboxSearchPlaceholder: "Search titles or summaries",
+  inboxNoMatches: "No matching items.",
   unreadBadge: (n) => `${n} unread`,
   pausedBadge: "Paused",
   errorBadge: (s) => `Error: ${s}`,
@@ -414,22 +446,36 @@ function mountInbox(ctx) {
   let page = 0;
   let lastTotal = 0;
   const bar = ctx.ui.rowbar();
-  const scopeSeg = ctx.ui.segmented(
-    [
-      { value: "unread", label: "\u672A\u8BFB" },
-      { value: "all", label: "\u5168\u90E8" },
-      { value: "starred", label: "\u661F\u6807" }
-    ],
-    { value: "unread", size: "sm", onSelect: () => {
-      page = 0;
-      void refresh();
-    } }
+  const scopeSelect = ctx.ui.select();
+  scopeSelect.append(
+    new Option(t.scopeUnread, "unread"),
+    new Option(t.scopeAll, "all"),
+    new Option(t.scopeStarred, "starred")
   );
+  scopeSelect.value = "unread";
+  scopeSelect.style.width = "86px";
+  scopeSelect.addEventListener("change", () => {
+    page = 0;
+    void refresh();
+  });
   const feedSelect = ctx.ui.select();
   feedSelect.appendChild(new Option(t.allFeeds, ""));
   feedSelect.addEventListener("change", () => {
     page = 0;
     void refresh();
+  });
+  const searchInput = ctx.ui.input({ type: "search", placeholder: t.inboxSearchPlaceholder });
+  searchInput.style.width = "220px";
+  let query = "";
+  let searchTimer = null;
+  searchInput.addEventListener("input", () => {
+    if (searchTimer != null) clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      searchTimer = null;
+      query = searchInput.value.trim();
+      page = 0;
+      void refresh();
+    }, 250);
   });
   const markReadBtn = ctx.ui.button(t.markRead, { size: "sm", onClick: () => void locked(() => mark("read")) });
   const starBtn = ctx.ui.button(t.star, { size: "sm", onClick: () => void locked(() => mark("starred")) });
@@ -462,7 +508,7 @@ function mountInbox(ctx) {
         await refresh();
         return;
       }
-      const scope = scopeSeg.value || "unread";
+      const scope = scopeSelect.value || "unread";
       const feedId = feedSelect.value || void 0;
       const probe = await ctx.invoke("items.list", [{
         scope,
@@ -491,7 +537,12 @@ function mountInbox(ctx) {
       await refresh();
     })
   });
-  bar.append(scopeSeg.el, feedSelect, ctx.ui.h("div", "grow"), markReadBtn, starBtn, markAllBtn, clearBtn);
+  const actionBar = ctx.ui.h("div", null);
+  actionBar.style.display = "flex";
+  actionBar.style.alignItems = "center";
+  actionBar.style.gap = "2px";
+  actionBar.append(markReadBtn, starBtn, markAllBtn, clearBtn);
+  bar.append(scopeSelect, searchInput, feedSelect, ctx.ui.h("div", "grow"), actionBar);
   sheet.body.appendChild(bar);
   const table = ctx.ui.table({ head: ["", t.colTitle, t.colFeed, t.colTime] });
   table.el.addEventListener("change", updateClearLabel);
@@ -564,7 +615,7 @@ function mountInbox(ctx) {
       td.style.textAlign = "center";
       td.style.verticalAlign = "middle";
       td.style.color = "var(--muted-foreground)";
-      td.textContent = t.emptyInbox;
+      td.textContent = query ? t.inboxNoMatches : t.emptyInbox;
       tr.appendChild(td);
       table.body.appendChild(tr);
       return;
@@ -587,26 +638,33 @@ function mountInbox(ctx) {
     }
     updateClearLabel();
   }
+  let refreshGeneration = 0;
   const refresh = async () => {
+    const generation = ++refreshGeneration;
     try {
       const overview = await ctx.invoke("overview");
+      if (generation !== refreshGeneration) return;
       rulesLine.textContent = t.inboxDesc(
         overview.limits.retentionDays,
         overview.limits.maxItemsTotal,
         overview.limits.maxItemsPerFeed
       );
       const feeds = await ctx.invoke("feeds.list");
+      if (generation !== refreshGeneration) return;
       const selected = feedSelect.value;
       feedSelect.replaceChildren(new Option(t.allFeeds, ""));
       for (const feed of feeds) feedSelect.appendChild(new Option(feed.title, feed.id));
       feedSelect.value = selected;
       if (feedSelect.value !== selected) feedSelect.value = "";
-      renderItems(await ctx.invoke("items.list", [{
-        scope: scopeSeg.value || "unread",
+      const payload = await ctx.invoke("items.list", [{
+        scope: scopeSelect.value || "unread",
         ...feedSelect.value ? { feedId: feedSelect.value } : {},
+        ...query ? { query } : {},
         limit: 5e3,
         offset: 0
-      }]));
+      }]);
+      if (generation !== refreshGeneration) return;
+      renderItems(payload);
     } catch (error) {
       show(`${t.loadError}: ${errorText(error)}`, true);
     }
@@ -783,7 +841,9 @@ function mountFeeds(ctx) {
   function openAddDialog() {
     const body = ctx.ui.h("div", null);
     const urlInput = ctx.ui.input({ placeholder: t.feedUrlPlaceholder, cls: "mono" });
-    body.appendChild(ctx.ui.field(`${t.feedUrlLabel} *`, urlInput));
+    const urlField = ctx.ui.field(`${t.feedUrlLabel} *`, urlInput);
+    urlField.querySelector(".fieldlabel")?.appendChild(fieldHintMark(ctx, t.feedUrlHint));
+    body.appendChild(urlField);
     const form = buildFormFields(body);
     const testLine = ctx.ui.msgline();
     const testBtn = ctx.ui.button(t.dialogTest, {
@@ -1070,7 +1130,7 @@ function mountOpml(ctx) {
     }
   };
 }
-function mountConfigForm(ctx, sheets, onSaved) {
+function mountConfigForm(ctx, sheets, onSaved, renderExtra) {
   const t = text(ctx.language);
   const message = ctx.ui.msgline();
   const show = (body, bad = false) => {
@@ -1125,6 +1185,13 @@ function mountConfigForm(ctx, sheets, onSaved) {
     }
     ctx.root.appendChild(sheet.el);
   }
+  renderExtra?.(ctx.root);
+  if (renderExtra) {
+    const divider = ctx.ui.h("div", null);
+    divider.style.borderTop = "1px solid var(--line)";
+    divider.style.margin = "18px 0 4px";
+    ctx.root.appendChild(divider);
+  }
   const saveBtn = ctx.ui.button(t.saveConfig, {
     variant: "primary",
     onClick: () => void locked(async () => {
@@ -1136,6 +1203,7 @@ function mountConfigForm(ctx, sheets, onSaved) {
     })
   });
   const saveBar = ctx.ui.rowbar();
+  if (renderExtra) saveBar.style.marginTop = "12px";
   saveBar.appendChild(saveBtn);
   ctx.root.appendChild(saveBar);
   ctx.root.appendChild(message);
@@ -1157,6 +1225,48 @@ function mountConfigForm(ctx, sheets, onSaved) {
       show(`${t.loadError}: ${errorText(error)}`, true);
     }
   })();
+}
+function mountPreview(ctx, root) {
+  const t = text(ctx.language);
+  const sheet = ctx.ui.sheet({ title: t.previewTitle, desc: t.previewDesc });
+  const bar = ctx.ui.rowbar();
+  const output = ctx.ui.h("pre", null);
+  output.textContent = t.previewHint;
+  output.setAttribute("aria-live", "polite");
+  output.style.whiteSpace = "pre-wrap";
+  output.style.wordBreak = "break-word";
+  output.style.margin = "0";
+  output.style.minHeight = "72px";
+  output.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, monospace";
+  output.style.fontSize = "0.9em";
+  const status = ctx.ui.msgline();
+  let busy = false;
+  const run = async (kind) => {
+    if (busy) return;
+    busy = true;
+    const lock = ctx.ui.disable(liveBtn, digestBtn);
+    try {
+      const result = await ctx.invoke("notify.preview", [{ kind }]);
+      output.textContent = result.text ?? (kind === "digest" ? t.previewEmptyDigest : t.previewEmptyLive);
+      if (!result.text) {
+        status.textContent = kind === "digest" ? t.previewEmptyDigest : t.previewEmptyLive;
+      } else if (!result.sent) {
+        status.textContent = t.previewNotSent;
+      } else {
+        status.textContent = result.fallback ? t.previewSentFallback : t.previewSent;
+      }
+    } catch (error) {
+      status.textContent = `${t.failed}: ${errorText(error)}`;
+    } finally {
+      lock.dispose();
+      busy = false;
+    }
+  };
+  const liveBtn = ctx.ui.button(t.previewLive, { size: "sm", onClick: () => void run("live") });
+  const digestBtn = ctx.ui.button(t.previewDigest, { size: "sm", onClick: () => void run("digest") });
+  bar.append(liveBtn, digestBtn);
+  sheet.body.append(bar, output, status);
+  root.appendChild(sheet.el);
 }
 function mountNotify(ctx) {
   const t = text(ctx.language);
@@ -1180,7 +1290,7 @@ function mountNotify(ctx) {
       ]
     }
   ], () => {
-  });
+  }, (root) => mountPreview(ctx, root));
 }
 function mountSettings(ctx) {
   const t = text(ctx.language);

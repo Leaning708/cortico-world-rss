@@ -1,6 +1,6 @@
 {
   "name": "cortico-world-rss",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "description": "RSS World for Cortico: subscribe to multiple feeds, get condensed notifications from Coo, manage subscriptions from chat or WebUI",
   "repository": {
@@ -59,6 +59,7 @@
     "test": "esbuild src/webui/client.ts --bundle --format=esm --platform=browser --target=es2022 --outfile=dist/webui.js && vitest run",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.web.json",
     "describe:local": "tsx scripts/describe.ts",
+    "bump:dev": "node scripts/bump-dev.mjs",
     "feed-server": "node scripts/feed-server.mjs"
   },
   "dependencies": {

@@ -172,3 +172,26 @@ describe('RssPoller 合批与过滤', () => {
     expect(calls).toBe(1); // 已过窗口,下一次是明天
   });
 });
+
+describe('播报预览', () => {
+  it('previewBatch 不消费缓冲,与随后 flush 文本一致', async () => {
+    const env = makeEnv({ eventBatchSeconds: 5, eventMaxHeadlines: 10 });
+    const feed = env.store.createFeed({ url: 'https://a.org/feed', title: 'A 源' });
+    env.fetchHolder.impl = async () => feedResponse(RSS([['p1', '预览一'], ['p2', '预览二'], ['p3', '预览三']], 'A 源'));
+    const poller = env.poller as unknown as {
+      pollFeed(feed: unknown, opts?: unknown): Promise<unknown>;
+    };
+    await poller.pollFeed(env.store.feeds()[0], { silentError: true });
+    expect(env.poller.pendingBatchSize()).toBe(3);
+    expect(env.batches).toHaveLength(0);
+    const preview = env.poller.previewBatch();
+    expect(preview?.text).toContain('RSS 3 条新内容');
+    expect(preview?.meta.total).toBe(3);
+    expect(env.poller.pendingBatchSize()).toBe(3);
+    expect(env.batches).toHaveLength(0);
+    env.poller.flushBatch();
+    expect(env.batches[0]?.text).toBe(preview?.text ?? '');
+    expect(env.poller.pendingBatchSize()).toBe(0);
+    void feed;
+  });
+});
