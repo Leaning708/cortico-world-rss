@@ -279,7 +279,7 @@ flowchart LR
       "en": { "displayName": "RSS Reader", "description": "Subscribe to RSS feeds; Coo condenses and notifies. Daily digest, full-text reading and OPML included." }
     }
   },
-  "files": ["src", "dist", "assets", "README.md", "CHANGELOG.md", "describe.json"],
+  "files": ["src", "dist", "assets", "README.md", "describe.json"],
   "scripts": {
     "build:webui": "esbuild src/webui/client.ts --bundle --format=esm --platform=browser --target=es2022 --outfile=dist/webui.js",
     "test": "pnpm build:webui && vitest run",
@@ -541,7 +541,7 @@ cortico-world-rss/
 
 ### 11.3 发布
 
-本机自用，不发布。若将来发布：npm 名已核实可用；发布前在 Cortico 检出根跑 `pnpm describe:extension` + `pnpm check:extension`；`CHANGELOG.md` 按版本分节；发不发由你决定。
+本机自用，不发布。若将来发布：npm 名已核实可用；发布前在 Cortico 检出根跑 `pnpm describe:extension` + `pnpm check:extension`；每个对外版本在 GitHub Releases 写发布说明（不维护仓库内 CHANGELOG）；发不发由你决定。
 
 ---
 

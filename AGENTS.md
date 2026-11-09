@@ -44,6 +44,13 @@ RSS_LIVE_TEST=1 npx vitest run tests/live.test.ts  # 真机集成(自起测试�
 
 **版本必须 bump**:面板产物按 `/assets/extensions/<包>/<版本>/webui.js` 以 `Cache-Control: immutable` 提供——同版本内的改动,重启进程、换源都到不了浏览器。
 
+## 版本与发布记录
+
+- 版本号、git tag 与 npm 版本一一对应;对外发布记录写在 **GitHub Releases**,仓库不再维护 `CHANGELOG.md`。
+- 发布时先把版本号、构建、测试、文档准备好并提交,再打 tag,并创建对应的 GitHub Release;发布说明就是该版本的变更记录。
+- 开发期不需要逐次记录;提交信息写清改动即可。
+- 发布说明面向用户写功能、行为变化与修复;实现细节放 `docs/design.md` 或提交信息里。
+
 ## 常见变更的触点清单
 
 ### 新增一个配置项(触点最多,缺一不可)

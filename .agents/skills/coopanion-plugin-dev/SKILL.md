@@ -26,7 +26,7 @@ Coopanion 用 [Cortico](https://github.com/Pal-AI-Lab/Cortico) 框架组装；�
 
 ## 0. 三条铁律（先记这三条，再往下读）
 
-1. **每次改动都 bump `package.json` 的 patch 版本**。面板产物按 `/assets/extensions/<包>/<版本>/webui.js` 以 `Cache-Control: public, max-age=31536000, immutable` 提供——同一版本号内的任何改动，重启进程、换源都到不了浏览器。bump 同时给 `CHANGELOG.md` 加对应分节。
+1. **每次改动都 bump `package.json` 的 patch 版本**。面板产物按 `/assets/extensions/<包>/<版本>/webui.js` 以 `Cache-Control: public, max-age=31536000, immutable` 提供——同一版本号内的任何改动，重启进程、换源都到不了浏览器。bump 后按发布节奏在 GitHub Releases 写该版本的发布说明（仓库不强制维护 CHANGELOG）。
 2. **构建产物随包提交，`link:` 本机扩展必须重启进程才生效**：`describe.json`、`dist/webui.js` 是提交进包的文件；改代码后不重启 Coopanion，扩展还是旧代码。
 3. **测试不碰真实网络，"测试全绿"必须真跑过**：外部行为通过注入的 `fetchImpl` / `createSocket` / `resolve` 模拟；不为了让测试变绿而删断言或跳过用例。
 
@@ -260,7 +260,34 @@ bash .agents/skills/coopanion-plugin-dev/scripts/find-webui-port.sh
 
 ### G.2 不要替用户发布
 
-`npm publish` 由用户自己决定。若用户要发，提醒：`keywords` 带类关键字、`cortico.api` 对、`describe.json` 在包内、`CHANGELOG.md` 有当前版本一节、`os` 不设除非有平台限制；收录到市场是在 `Pal-AI-Lab/cortico-extensions` 开 `[sync] <包名>` issue。
+`npm publish` 由用户自己决定。若用户要发，提醒：`keywords` 带类关键字、`cortico.api` 对、`describe.json` 在包内、GitHub 上有对应 tag 的 Release 说明、`os` 不设除非有平台限制；新包首次发布建议到 `Pal-AI-Lab/cortico-extensions` 开 `[sync] <包名>` issue，让市场立刻收录；后续新版本市场会定时同步，着急时再开即可，不必每次发版都开。
+
+### G.3 发布后同步国内镜像（npmmirror）
+
+Coopanion 扩展市场默认走 `https://registry.npmmirror.com`；新包/新版本**不会立即**被镜像收录。发布成功（含 staged 审核通过）后，主动触发一次同步：
+
+```bash
+# 触发；返回 {"ok":true,"id":"...","state":"waiting"}
+curl -X PUT "https://registry.npmmirror.com/-/package/<包名>/syncs"
+
+# 用返回的 id 轮询到 state=success
+curl "https://registry.npmmirror.com/-/package/<包名>/syncs/<id>"
+```
+
+也可以用网页点同步：`https://npmmirror.com/sync/<包名>`。
+
+注意：
+
+- 镜像元数据同步后，**搜索索引仍可能滞后**。Coopanion 市场先用 `keywords:<类关键字>` 查 npm registry，镜像对这个查询可能返回空，再回退到普通文本搜索；索引没收录时仍会搜不到。
+- 想立刻在 Coopanion 市场可见，可在「World 扩展 → 扩展市场」把 npm 源临时切到 `https://registry.npmjs.org`（搜索、更新、安装一起生效）；不着急就等镜像索引更新。
+- **每次发版都要重复这一步**，否则国内镜像可能长期停留在旧版本或根本搜不到新包。
+
+### G.4 版本与发布记录（GitHub Releases）
+
+- 不强制在仓库里维护 `CHANGELOG.md`；**对外发布记录写在 GitHub Releases**，与 npm 版本、git tag 保持一致。
+- 发布流程：更新版本 → 构建/测试/目检 → 提交 → 打 tag 并推送 → 在 GitHub 创建对应 Release（写用户向的功能、行为变化、修复）→ npm publish。
+- 开发期不需要逐次记录版本；提交信息写清改动即可，不要为每次调试 patch 单独写发布说明。
+- 发布说明面向用户，不写内部实现流水账；实现细节放设计文档或提交信息。
 
 ## 红线
 
