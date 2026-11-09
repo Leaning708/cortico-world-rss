@@ -290,6 +290,27 @@ curl "https://registry.npmmirror.com/-/package/<包名>/syncs/<id>"
 - 开发期不需要逐次记录版本；提交信息写清改动即可，不要为每次调试 patch 单独写发布说明。
 - 发布说明面向用户，不写内部实现流水账；实现细节放设计文档或提交信息。
 
+### G.5 npm staged publishing 与 `0.0.0-stage`
+
+- `0.0.0-stage` **不是普通发布生成的版本**。它只在用 npm staged publishing **首次发布一个还不存在的包**时出现：npm 先创建一个公开占位版本，等 maintainer 用 2FA approve 后才真正发布版本。
+- 普通 `npm publish` 不会生成它；已经存在的包以后再用 staged publishing 也不会再创建这个占位。
+- **首次发布新包优先直接 `npm publish`**（带 OTP 或 CI token），不要用 `npm stage publish`，除非确实需要审核流程。若必须 staged：`npm stage publish` → `npm stage list` → `npm stage approve`；approve 后占位不会自动消失，需要单独删除。
+- 删除单版本只能用 CLI（npm 网站只能删整包）：
+
+  ```bash
+  npm unpublish <包名>@0.0.0-stage \
+    --registry=https://registry.npmjs.org \
+    --force \
+    --otp=<验证器6位码>
+  ```
+
+- 2FA 的坑：
+  - authenticator（TOTP）可以用 `--otp`；
+  - security key / passkey 必须在**交互终端**里跑，CLI 会打开浏览器/系统验证，不能只给 `--otp`；
+  - **granular token with bypass 2FA 不能 unpublish**（能 publish，但删版本会被 403 拒绝），必须换带 OTP 的普通登录或 token；
+  - 没开 2FA 的账号先到 npmjs.com → Account → Two-Factor Authentication 开启验证器。
+- 删除后按 G.3 再同步 npmmirror，确认镜像版本列表也干净。
+
 ## 红线
 
 - 只做用户确认过的功能；不顺手加"可能有用"的工具或网络请求。
@@ -314,6 +335,7 @@ curl "https://registry.npmmirror.com/-/package/<包名>/syncs/<id>"
 | Node 22 下 `corepack pnpm` 报 `Cannot find matching keyid` | corepack 自带密钥过期；临时用 `$env:COREPACK_INTEGRITY_KEYS='0'; corepack pnpm install`（PowerShell），不要改系统设置 |
 | 装完不生效 | `link:` 本机扩展必须重启进程；只改源码不会热更 |
 | 发布时 403 / 包名已存在 | 包名被别人占用（查 `https://registry.npmjs.org/<包名>`）；换名或加 scope。World 的 `id` 与 npm 包名无关，可继续用 |
+| npm 版本列表出现 `0.0.0-stage` | staged publishing 首次发布不存在的包留下的公开占位；普通 publish 不会生成。用 `npm unpublish <包>@0.0.0-stage --otp=...` 删除（需交互 2FA，bypass token 不能删），再同步镜像；详见 G.5 |
 | 含中文的 `.ps1` 报"意外的标记" | 文件没存成 UTF-8 带 BOM，PowerShell 5.1 按 GBK 解析 |
 | Git Bash 里 `taskkill //IM` 不生效 | 单斜杠被路径转换吃掉，必须双斜杠；或直接用 PowerShell 脚本绕开 |
 | 中文文案里混着半角标点 | 用 `scripts/normalize-punct.mjs` 预览后 `--apply` 清扫 |
