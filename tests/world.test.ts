@@ -259,10 +259,31 @@ describe('事件链路', () => {
     await tools.rss_add({ url: 'https://example.org/feed.xml', baseline: 1 });
     (world as unknown as { deliverDigest(): void }).deliverDigest();
     expect(host.deferred).toHaveLength(1);
-    expect(host.deferred[0].spec.type).toBe('rss.daily_digest');
+    const spec = host.deferred[0].spec as {
+      type?: string;
+      origin?: string;
+      meta?: { date?: string; counts?: Record<string, number> };
+    };
+    expect(spec.type).toBe('rss.daily_digest');
+    // 正文含源名与条目标题(源站文字),必须按 external 投递。
+    expect(spec.origin).toBe('external');
+    expect(spec.meta?.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(spec.meta?.counts).toEqual({
+      fetched: 1, unread: 1, broadcastUnread: 1, silentUnread: 0, highlights: 1,
+    });
     const rendered = host.renderDeferred()[0];
     expect(rendered).toContain('RSS晨报');
     expect(rendered).toContain('晨报条目');
+    // meta 与正文同源:正文里的数字必须等于 meta 里的计数。
+    expect(rendered).toContain(`过去 24 小时收到 ${spec.meta?.counts?.fetched} 条新内容`);
+    await world.stop();
+  });
+
+  it('晨报:当天零内容零未读时不推 deferred', async () => {
+    const { world } = makeWorld({ digestEnabled: true, startupNotify: false });
+    const host = await mounted(world);
+    (world as unknown as { deliverDigest(): void }).deliverDigest();
+    expect(host.deferred).toHaveLength(0);
     await world.stop();
   });
 
@@ -279,6 +300,10 @@ describe('事件链路', () => {
     expect(rendered).toContain('当前未读 2 条');
     expect(rendered).toContain('播报条目');
     expect(rendered).not.toContain('静默条目');
+    const spec = host.deferred[0].spec as { meta?: { counts?: Record<string, number> } };
+    expect(spec.meta?.counts).toEqual({
+      fetched: 2, unread: 2, broadcastUnread: 1, silentUnread: 1, highlights: 1,
+    });
     await world.stop();
   });
 
@@ -291,6 +316,11 @@ describe('事件链路', () => {
     expect(rendered).toContain('过去 24 小时收到 1 条新内容');
     expect(rendered).toContain('静默源的 1 条只留在收件箱');
     expect(rendered).not.toContain('静默条目');
+    const spec = host.deferred[0].spec as { origin?: string; meta?: { counts?: Record<string, number> } };
+    expect(spec.origin).toBe('external');
+    expect(spec.meta?.counts).toEqual({
+      fetched: 1, unread: 1, broadcastUnread: 0, silentUnread: 1, highlights: 0,
+    });
     await world.stop();
   });
 
@@ -340,7 +370,29 @@ describe('事件链路', () => {
       feedId: 'f_x', feedTitle: 'X', code: 'http 404', consecutiveErrors: 4, hint: 'h',
     });
     expect(host.events.filter((e) => e.type === 'rss.feed_error')).toHaveLength(1);
+    const errorEvent = host.events.find((e) => e.type === 'rss.feed_error');
+    // 正文含源名(源站文字),必须按 external 投递;meta 带连续失败次数。
+    expect(errorEvent?.origin).toBe('external');
+    expect(errorEvent?.meta).toMatchObject({ feedId: 'f_x', code: 'http 404', consecutiveErrors: 3 });
     void calls;
+    await world.stop();
+  });
+
+  it('事件 origin 守卫:本扩展推送的事件一律 external', async () => {
+    const { world, tools } = makeWorld({ digestEnabled: true }, () => response(RSS([['g1', '守卫条目']])));
+    const host = await mounted(world);
+    await tools.rss_add({ url: 'https://example.org/feed.xml', baseline: 1 });
+    (world as unknown as { deliverDigest(): void }).deliverDigest();
+    (world as unknown as { deliverFeedError(info: object): void }).deliverFeedError({
+      feedId: 'f_g', feedTitle: '守卫源', code: 'http 500', consecutiveErrors: 3, hint: '稍后重试',
+    });
+    const origins = [
+      ...host.events.map((event) => event.origin),
+      ...host.deferred.map((entry) => (entry.spec as { origin?: string }).origin),
+    ];
+    expect(origins.length).toBeGreaterThan(0);
+    // 源站文字不能借系统口吻:任何 internal 事件都算回归。
+    expect(new Set(origins)).toEqual(new Set(['external']));
     await world.stop();
   });
 });

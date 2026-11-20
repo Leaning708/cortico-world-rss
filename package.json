@@ -1,6 +1,6 @@
 {
   "name": "cortico-world-rss",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "type": "module",
   "description": "RSS World for Cortico: subscribe to multiple feeds, get condensed notifications from Coo, manage subscriptions from chat or WebUI",
   "repository": {

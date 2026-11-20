@@ -62,6 +62,12 @@ export function nextOccurrenceOfDayTime(minuteOfDay: number, timezone: string, n
   return candidate;
 }
 
+/** 该时区里的日期键(YYYY-MM-DD),给晨报 meta 等机器字段用。 */
+export function dateKeyIn(timezone: string, date: Date): string {
+  const { year, month, day } = datePartsIn(timezone, date);
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
 /** 相对时间的短语(收件箱/回执用)。 */
 export function relativeTime(iso: string | null, now: Date, language: 'zh' | 'en'): string {
   if (!iso) return language === 'zh' ? '未知时间' : 'unknown time';

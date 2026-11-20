@@ -29,6 +29,12 @@ export interface ParsedFeed {
 /** XML 明显不是 feed 时抛出;消息给面板与回执直接显示。 */
 export class ParseError extends Error {}
 
+/**
+ * 源站可控文字的长度上限:源标题与条目标题都可能在恶意/异常源里无限长,
+ * 不截断会顺着事件正文、回执与面板一路放大。500 字够容纳真实标题。
+ */
+const MAX_TITLE_CHARS = 500;
+
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
@@ -142,7 +148,7 @@ function enclosureOf(node: unknown): { mime: string; url: string } | null {
 }
 
 function normalizeItem(raw: Record<string, unknown>, kind: 'rss' | 'atom'): ParsedItem | null {
-  const title = stripHtml(textOf(raw.title)).slice(0, 500);
+  const title = stripHtml(textOf(raw.title)).slice(0, MAX_TITLE_CHARS);
   const contentEncoded = raw['content:encoded'] ?? raw['content'];
   const contentHtml = contentEncoded != null ? textOf(contentEncoded) : null;
   const summaryRaw = raw.description ?? raw.summary ?? null;
@@ -221,7 +227,7 @@ export function parseJsonFeed(text: string): ParsedFeed {
   }
   if (!Array.isArray(feed.items)) throw new ParseError('JSON Feed 的 items 不是数组');
   const feedBase = jsonString(feed.home_page_url) ?? jsonString(feed.feed_url);
-  const title = stripHtml(jsonString(feed.title) ?? '');
+  const title = stripHtml(jsonString(feed.title) ?? '').slice(0, MAX_TITLE_CHARS);
   const link = jsonString(feed.home_page_url) ?? jsonString(feed.feed_url);
   const description = jsonString(feed.description) ? stripHtml(jsonString(feed.description)!) : null;
 
@@ -235,7 +241,7 @@ export function parseJsonFeed(text: string): ParsedFeed {
     const contentText = jsonString(entry.content_text);
     const summary = jsonString(entry.summary);
     const descriptionText = contentText ?? (contentHtml ? stripHtml(contentHtml) : summary ? stripHtml(summary) : '');
-    const itemTitle = stripHtml(jsonString(entry.title) ?? '');
+    const itemTitle = stripHtml(jsonString(entry.title) ?? '').slice(0, MAX_TITLE_CHARS);
     const uid = jsonString(entry.id) ?? url ?? hashUid(`${itemTitle}\n${descriptionText}`);
     const authors = entry.authors;
     const author = Array.isArray(authors) ? authors.map(jsonAuthor).find((name): name is string => !!name) ?? null : jsonAuthor(entry.author);
@@ -294,7 +300,7 @@ export function parseFeed(xml: string): ParsedFeed {
     if (normalized) items.push(normalized);
   }
 
-  const title = stripHtml(textOf(channel.title));
+  const title = stripHtml(textOf(channel.title)).slice(0, MAX_TITLE_CHARS);
   const feedLink = kind === 'atom'
     ? pickLink(asArray(channel.link)) || null
     : String(textOf(channel.link)).trim() || null;

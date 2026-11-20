@@ -18,7 +18,7 @@ import {
   type RssConfigSection,
 } from './config.ts';
 import { RSS_CONFIG_KEYS, sanitizeConfigPatch } from './config-save.ts';
-import { relativeTime } from './chrono.ts';
+import { dateKeyIn, relativeTime } from './chrono.ts';
 import { extractArticle } from './extract.ts';
 import { fetchText, FetchFailure, type FetchImpl } from './fetcher.ts';
 import { discoverFeedsInHtml, parseFeed, ParseError } from './parse.ts';
@@ -200,6 +200,27 @@ interface UrlTestResult {
   discovered: boolean;
 }
 
+/** 晨报快照:正文与 meta 由同一次计算产生,保证两者永远一致。 */
+type DigestSnapshot = {
+  text: string;
+  meta: {
+    /** 用户时区里的晨报日期(YYYY-MM-DD)。 */
+    date: string;
+    counts: {
+      /** 过去 24 小时入库条数(含静默源)。 */
+      fetched: number;
+      /** 当前未读总数。 */
+      unread: number;
+      /** 会播报的源(notify)的未读数。 */
+      broadcastUnread: number;
+      /** 静默源的未读数。 */
+      silentUnread: number;
+      /** 正文列出的未读重点条数(0..3)。 */
+      highlights: number;
+    };
+  };
+};
+
 export class RssWorld implements World {
   readonly id = RSS_ID;
 
@@ -285,7 +306,7 @@ export class RssWorld implements World {
     }
   }
 
-  /** 源连续失败 ≥3 次：internal 事件，同一源 6 小时节流。 */
+  /** 源连续失败 ≥3 次：external 事件(正文含源站名)，同一源 6 小时节流。 */
   private deliverFeedError(info: FeedErrorInfo): void {
     if (!this.host) return;
     const last = this.feedErrorLastAt.get(info.feedId) ?? 0;
@@ -295,26 +316,37 @@ export class RssWorld implements World {
       type: 'rss.feed_error',
       ts: this.now().toISOString(),
       source: RSS_ID,
-      origin: 'internal',
+      origin: 'external',
       senderKey: `rss.feed_error:${info.feedId}`,
       text: `「${info.feedTitle}」连续 ${info.consecutiveErrors} 次拉取失败(${info.code}):${info.hint}。`,
-      meta: { feedId: info.feedId, code: info.code },
+      meta: { feedId: info.feedId, code: info.code, consecutiveErrors: info.consecutiveErrors },
     }, { trigger: 'debounce' });
   }
 
-  /** 晨报时刻：pushDeferred 投递时现算；当天没有内容则 render 返回 null,不投递。 */
+  /**
+   * 晨报时刻：现算一次快照(正文与 meta 同源),再交给 pushDeferred 投递。
+   * 正文含源名与条目标题(源站文字),因此按 external 投递。
+   * 当天没有内容(0 条新内容且 0 未读)时连 deferred 都不推。
+   */
   private deliverDigest(): void {
     if (!this.host) return;
+    const snapshot = this.buildDigest(this.now());
+    if (!snapshot) return;
     this.host.pushDeferred({
       type: 'rss.daily_digest',
-      origin: 'internal',
+      origin: 'external',
       senderKey: 'rss.daily_digest',
-      render: () => this.renderDigest(),
+      meta: snapshot.meta,
+      render: () => snapshot.text,
     }, { trigger: 'flush' });
   }
 
+  /** 预览用:按当前时刻现算正文,不产生事件。 */
   private renderDigest(): string | null {
-    const now = this.now();
+    return this.buildDigest(this.now())?.text ?? null;
+  }
+
+  private buildDigest(now: Date): DigestSnapshot | null {
     // 计数覆盖全库(含静默源):用户明确要求晨报统计包含静默数据。
     const fetched = this.store.countSince(24 * 3600 * 1000, now);
     const unread = this.store.unreadCount();
@@ -333,11 +365,17 @@ export class RssWorld implements World {
       : silentUnread > 0
         ? `未读里暂时没有需要播报的条目(静默源的 ${silentUnread} 条只留在收件箱)。`
         : '没有积压的未读，收件箱是干净的。';
-    const parts = [
+    const text = [
       `RSS晨报：过去 24 小时收到 ${fetched} 条新内容，当前未读 ${unread} 条。`,
       highlightLine,
-    ];
-    return parts.join('\n');
+    ].join('\n');
+    return {
+      text,
+      meta: {
+        date: dateKeyIn(this.timezone, now),
+        counts: { fetched, unread, broadcastUnread, silentUnread, highlights: items.length },
+      },
+    };
   }
 
   // ── World 契约 ──────────────────────────────────────────────────────

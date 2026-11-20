@@ -218,3 +218,38 @@ describe('JSON Feed', () => {
     ]);
   });
 });
+
+describe('标题长度钳制', () => {
+  // 源站可控文字必须截断:否则超长标题会顺着事件正文、回执与面板一路放大。
+  const long = 'x'.repeat(1000);
+
+  it('JSON Feed 源标题超长时截到 500', () => {
+    const feed = parseFeed(JSON.stringify({
+      version: 'https://jsonfeed.org/version/1.1',
+      title: long,
+      items: [{ id: 'a', title: '正常条目' }],
+    }));
+    expect(feed.title).toHaveLength(500);
+  });
+
+  it('JSON Feed 条目标题超长时截到 500', () => {
+    const feed = parseFeed(JSON.stringify({
+      version: 'https://jsonfeed.org/version/1.1',
+      title: '源',
+      items: [{ id: 'a', title: long }],
+    }));
+    expect(feed.items[0].title).toHaveLength(500);
+  });
+
+  it('RSS 源标题超长时截到 500', () => {
+    const feed = parseFeed(`<?xml version="1.0"?><rss version="2.0"><channel><title>${long}</title>
+      <item><title>x</title><link>https://example.org/1</link></item></channel></rss>`);
+    expect(feed.title).toHaveLength(500);
+  });
+
+  it('RSS 条目标题超长时截到 500', () => {
+    const feed = parseFeed(`<?xml version="1.0"?><rss version="2.0"><channel><title>t</title>
+      <item><title>${long}</title><link>https://example.org/1</link></item></channel></rss>`);
+    expect(feed.items[0].title).toHaveLength(500);
+  });
+});
